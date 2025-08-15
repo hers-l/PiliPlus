@@ -1,8 +1,8 @@
+import 'package:PiliPlus/common/widgets/appbar/appbar.dart';
 import 'package:PiliPlus/common/widgets/scroll_physics.dart';
 import 'package:PiliPlus/models/common/later_view_type.dart';
 import 'package:PiliPlus/models_new/later/data.dart';
 import 'package:PiliPlus/models_new/later/list.dart';
-import 'package:PiliPlus/pages/history/view.dart' show AppBarWidget;
 import 'package:PiliPlus/pages/later/base_controller.dart';
 import 'package:PiliPlus/pages/later/controller.dart';
 import 'package:PiliPlus/utils/accounts.dart';
@@ -58,74 +58,124 @@ class _LaterPageState extends State<LaterPage>
   @override
   Widget build(BuildContext context) {
     return Obx(
-      () => PopScope(
-        canPop: !_baseCtr.enableMultiSelect.value,
-        onPopInvokedWithResult: (didPop, result) {
-          if (_baseCtr.enableMultiSelect.value) {
-            currCtr().handleSelect();
-          }
-        },
-        child: Scaffold(
-          resizeToAvoidBottomInset: false,
-          appBar: _buildAppbar,
-          floatingActionButton: Obx(
-            () => currCtr().loadingState.value.isSuccess
-                ? FloatingActionButton.extended(
-                    onPressed: currCtr().toViewPlayAll,
-                    label: const Text('播放全部'),
-                    icon: const Icon(Icons.playlist_play),
-                  )
-                : const SizedBox.shrink(),
-          ),
-          body: SafeArea(
-            top: false,
-            bottom: false,
-            child: Column(
-              children: [
-                TabBar(
-                  // isScrollable: true,
-                  // tabAlignment: TabAlignment.start,
-                  controller: _tabController,
-                  tabs: LaterViewType.values.map((item) {
-                    final count = _baseCtr.counts[item];
-                    return Tab(
-                        text: '${item.title}${count != -1 ? '($count)' : ''}');
-                  }).toList(),
-                  onTap: (_) {
-                    if (!_tabController.indexIsChanging) {
-                      currCtr().scrollController.animToTop();
-                    } else {
-                      if (_baseCtr.enableMultiSelect.value) {
-                        currCtr(_tabController.previousIndex).handleSelect();
-                      }
-                    }
-                  },
-                ),
-                Expanded(
-                  child: TabBarView(
-                    physics: _baseCtr.enableMultiSelect.value
-                        ? const NeverScrollableScrollPhysics()
-                        : const CustomTabBarViewScrollPhysics(),
+      () {
+        final enableMultiSelect = _baseCtr.enableMultiSelect.value;
+        return PopScope(
+          canPop: !enableMultiSelect,
+          onPopInvokedWithResult: (didPop, result) {
+            if (enableMultiSelect) {
+              currCtr().handleSelect();
+            }
+          },
+          child: Scaffold(
+            resizeToAvoidBottomInset: false,
+            appBar: _buildAppbar(enableMultiSelect),
+            floatingActionButton: Obx(
+              () => currCtr().loadingState.value.isSuccess
+                  ? FloatingActionButton.extended(
+                      onPressed: currCtr().toViewPlayAll,
+                      label: const Text('播放全部'),
+                      icon: const Icon(Icons.playlist_play),
+                    )
+                  : const SizedBox.shrink(),
+            ),
+            body: SafeArea(
+              top: false,
+              bottom: false,
+              child: Column(
+                children: [
+                  TabBar(
+                    // isScrollable: true,
+                    // tabAlignment: TabAlignment.start,
                     controller: _tabController,
-                    children:
-                        LaterViewType.values.map((item) => item.page).toList(),
+                    tabs: LaterViewType.values.map((item) {
+                      final count = _baseCtr.counts[item];
+                      return Tab(
+                        text: '${item.title}${count != -1 ? '($count)' : ''}',
+                      );
+                    }).toList(),
+                    onTap: (_) {
+                      if (!_tabController.indexIsChanging) {
+                        currCtr().scrollController.animToTop();
+                      } else {
+                        if (enableMultiSelect) {
+                          currCtr(_tabController.previousIndex).handleSelect();
+                        }
+                      }
+                    },
                   ),
-                ),
-              ],
+                  Expanded(
+                    child: TabBarView(
+                      physics: enableMultiSelect
+                          ? const NeverScrollableScrollPhysics()
+                          : const CustomTabBarViewScrollPhysics(),
+                      controller: _tabController,
+                      children: LaterViewType.values
+                          .map((item) => item.page)
+                          .toList(),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  PreferredSizeWidget get _buildAppbar {
+  PreferredSizeWidget _buildAppbar(bool enableMultiSelect) {
     final theme = Theme.of(context);
     Color color = theme.colorScheme.secondary;
 
-    return AppBarWidget(
-      visible: _baseCtr.enableMultiSelect.value,
-      child1: AppBar(
+    return MultiSelectAppBarWidget(
+      visible: enableMultiSelect,
+      ctr: currCtr(),
+      children: [
+        TextButton(
+          style: TextButton.styleFrom(
+            visualDensity: VisualDensity.compact,
+          ),
+          onPressed: () {
+            final ctr = currCtr();
+            RequestUtils.onCopyOrMove<LaterData, LaterItemModel>(
+              context: context,
+              isCopy: true,
+              ctr: ctr,
+              mediaId: null,
+              mid: ctr.accountService.mid,
+            );
+          },
+          child: Text(
+            '复制',
+            style: TextStyle(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+        TextButton(
+          style: TextButton.styleFrom(
+            visualDensity: VisualDensity.compact,
+          ),
+          onPressed: () {
+            final ctr = currCtr();
+            RequestUtils.onCopyOrMove<LaterData, LaterItemModel>(
+              context: context,
+              isCopy: false,
+              ctr: ctr,
+              mediaId: null,
+              mid: ctr.accountService.mid,
+            );
+          },
+          child: Text(
+            '移动',
+            style: TextStyle(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      ],
+      child: AppBar(
         title: const Text('稍后再看'),
         actions: [
           IconButton(
@@ -162,8 +212,10 @@ class _LaterPageState extends State<LaterPage>
                       ..onReload();
                   },
                   child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     child: Text.rich(
                       TextSpan(
                         children: [
@@ -203,8 +255,10 @@ class _LaterPageState extends State<LaterPage>
             child: PopupMenuButton(
               tooltip: '清空',
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 child: Text.rich(
                   TextSpan(
                     children: [
@@ -240,80 +294,6 @@ class _LaterPageState extends State<LaterPage>
             ),
           ),
           const SizedBox(width: 8),
-        ],
-      ),
-      child2: AppBar(
-        leading: IconButton(
-          tooltip: '取消',
-          onPressed: currCtr().handleSelect,
-          icon: const Icon(Icons.close_outlined),
-        ),
-        title: Obx(
-          () => Text(
-            '已选: ${_baseCtr.checkedCount.value}',
-          ),
-        ),
-        actions: [
-          TextButton(
-            style: TextButton.styleFrom(
-              visualDensity: VisualDensity.compact,
-            ),
-            onPressed: () => currCtr().handleSelect(true),
-            child: const Text('全选'),
-          ),
-          TextButton(
-            style: TextButton.styleFrom(
-              visualDensity: VisualDensity.compact,
-            ),
-            onPressed: () {
-              final ctr = currCtr();
-              RequestUtils.onCopyOrMove<LaterData, LaterItemModel>(
-                context: context,
-                isCopy: true,
-                ctr: ctr,
-                mediaId: null,
-                mid: ctr.accountService.mid,
-              );
-            },
-            child: Text(
-              '复制',
-              style: TextStyle(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-          TextButton(
-            style: TextButton.styleFrom(
-              visualDensity: VisualDensity.compact,
-            ),
-            onPressed: () {
-              final ctr = currCtr();
-              RequestUtils.onCopyOrMove<LaterData, LaterItemModel>(
-                context: context,
-                isCopy: false,
-                ctr: ctr,
-                mediaId: null,
-                mid: ctr.accountService.mid,
-              );
-            },
-            child: Text(
-              '移动',
-              style: TextStyle(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-          TextButton(
-            style: TextButton.styleFrom(
-              visualDensity: VisualDensity.compact,
-            ),
-            onPressed: () => currCtr().onDelChecked(context),
-            child: Text(
-              '移除',
-              style: TextStyle(color: theme.colorScheme.error),
-            ),
-          ),
-          const SizedBox(width: 6),
         ],
       ),
     );

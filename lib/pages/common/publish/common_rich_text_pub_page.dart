@@ -11,7 +11,7 @@ import 'package:PiliPlus/models_new/emote/emote.dart' as e;
 import 'package:PiliPlus/models_new/live/live_emote/emoticon.dart';
 import 'package:PiliPlus/pages/common/publish/common_publish_page.dart';
 import 'package:PiliPlus/pages/dynamics_mention/view.dart';
-import 'package:PiliPlus/utils/extension.dart';
+import 'package:PiliPlus/utils/page_utils.dart';
 import 'package:easy_debounce/easy_throttle.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -40,9 +40,9 @@ abstract class CommonRichTextPubPageState<T extends CommonRichTextPubPage>
   @override
   late final RichTextEditingController editController =
       RichTextEditingController(
-    items: widget.items,
-    onMention: onMention,
-  );
+        items: widget.items,
+        onMention: onMention,
+      );
 
   @override
   void initPubState() {
@@ -58,8 +58,9 @@ abstract class CommonRichTextPubPageState<T extends CommonRichTextPubPage>
   }
 
   Widget buildImage(int index, double height) {
-    final color =
-        Theme.of(context).colorScheme.secondaryContainer.withValues(alpha: 0.5);
+    final color = Theme.of(
+      context,
+    ).colorScheme.secondaryContainer.withValues(alpha: 0.5);
 
     void onClear() {
       pathList.removeAt(index);
@@ -74,12 +75,14 @@ abstract class CommonRichTextPubPageState<T extends CommonRichTextPubPage>
         GestureDetector(
           onTap: () async {
             controller.keepChatPanel();
-            await context.imageView(
+            await PageUtils.imageView(
               imgList: pathList
-                  .map((path) => SourceModel(
-                        url: path,
-                        sourceType: SourceType.fileImage,
-                      ))
+                  .map(
+                    (path) => SourceModel(
+                      url: path,
+                      sourceType: SourceType.fileImage,
+                    ),
+                  )
                   .toList(),
               initialPage: index,
             );
@@ -145,28 +148,31 @@ abstract class CommonRichTextPubPageState<T extends CommonRichTextPubPage>
   }
 
   void onPickImage([VoidCallback? callback]) {
-    EasyThrottle.throttle('imagePicker', const Duration(milliseconds: 500),
-        () async {
-      try {
-        List<XFile> pickedFiles = await imagePicker.pickMultiImage(
-          limit: limit,
-          imageQuality: 100,
-        );
-        if (pickedFiles.isNotEmpty) {
-          for (int i = 0; i < pickedFiles.length; i++) {
-            if (pathList.length == limit) {
-              SmartDialog.showToast('最多选择$limit张图片');
-              break;
-            } else {
-              pathList.add(pickedFiles[i].path);
+    EasyThrottle.throttle(
+      'imagePicker',
+      const Duration(milliseconds: 500),
+      () async {
+        try {
+          List<XFile> pickedFiles = await imagePicker.pickMultiImage(
+            limit: limit,
+            imageQuality: 100,
+          );
+          if (pickedFiles.isNotEmpty) {
+            for (int i = 0; i < pickedFiles.length; i++) {
+              if (pathList.length == limit) {
+                SmartDialog.showToast('最多选择$limit张图片');
+                break;
+              } else {
+                pathList.add(pickedFiles[i].path);
+              }
             }
+            callback?.call();
           }
-          callback?.call();
+        } catch (e) {
+          SmartDialog.showToast(e.toString());
         }
-      } catch (e) {
-        SmartDialog.showToast(e.toString());
-      }
-    });
+      },
+    );
   }
 
   void onChooseEmote(dynamic emote, double? width, double? height) {
@@ -222,22 +228,23 @@ abstract class CommonRichTextPubPageState<T extends CommonRichTextPubPage>
             "biz_id": "",
           });
         case RichTextType.vote:
-          list.add({
-            "raw_text": e.rawText,
-            "type": 4,
-            "biz_id": e.id,
-          });
-          list.add({
-            "raw_text": ' ',
-            "type": 1,
-            "biz_id": "",
-          });
+          list
+            ..add({
+              "raw_text": e.rawText,
+              "type": 4,
+              "biz_id": e.id,
+            })
+            ..add({
+              "raw_text": ' ',
+              "type": 1,
+              "biz_id": "",
+            });
       }
     }
     return list;
   }
 
-  double _mentionOffset = 0;
+  late double _mentionOffset = 0;
   Future<void> onMention([bool fromClick = false]) async {
     controller.keepChatPanel();
     final res = await DynMentionPanel.onDynMention(
@@ -294,8 +301,10 @@ abstract class CommonRichTextPubPageState<T extends CommonRichTextPubPage>
           delta = RichTextEditingDeltaReplacement(
             oldText: oldValue.text,
             replacementText: text,
-            replacedRange:
-                TextRange(start: selection.start - 1, end: selection.end),
+            replacedRange: TextRange(
+              start: selection.start - 1,
+              end: selection.end,
+            ),
             selection: TextSelection.collapsed(
               offset: selection.start - 1 + text.length,
             ),
@@ -376,49 +385,49 @@ abstract class CommonRichTextPubPageState<T extends CommonRichTextPubPage>
   }
 
   Widget get emojiBtn => Obx(
-        () {
-          final isEmoji = panelType.value == PanelType.emoji;
-          return ToolbarIconButton(
-            tooltip: isEmoji ? '输入' : '表情',
-            onPressed: () {
-              if (isEmoji) {
-                updatePanelType(PanelType.keyboard);
-              } else {
-                updatePanelType(PanelType.emoji);
-              }
-            },
-            icon: isEmoji
-                ? const Icon(Icons.keyboard, size: 22)
-                : const Icon(Icons.emoji_emotions, size: 22),
-            selected: isEmoji,
-          );
+    () {
+      final isEmoji = panelType.value == PanelType.emoji;
+      return ToolbarIconButton(
+        tooltip: isEmoji ? '输入' : '表情',
+        onPressed: () {
+          if (isEmoji) {
+            updatePanelType(PanelType.keyboard);
+          } else {
+            updatePanelType(PanelType.emoji);
+          }
         },
+        icon: isEmoji
+            ? const Icon(Icons.keyboard, size: 22)
+            : const Icon(Icons.emoji_emotions, size: 22),
+        selected: isEmoji,
       );
+    },
+  );
 
   Widget get atBtn => ToolbarIconButton(
-        onPressed: () => onMention(true),
-        icon: const Icon(Icons.alternate_email, size: 22),
-        tooltip: '@',
-        selected: false,
-      );
+    onPressed: () => onMention(true),
+    icon: const Icon(Icons.alternate_email, size: 22),
+    tooltip: '@',
+    selected: false,
+  );
 
   Widget get moreBtn => Obx(
-        () {
-          final isMore = panelType.value == PanelType.more;
-          return ToolbarIconButton(
-            tooltip: isMore ? '输入' : '更多',
-            onPressed: () {
-              if (isMore) {
-                updatePanelType(PanelType.keyboard);
-              } else {
-                updatePanelType(PanelType.more);
-              }
-            },
-            icon: isMore
-                ? const Icon(Icons.keyboard, size: 22)
-                : const Icon(Icons.add_circle_outline, size: 22),
-            selected: isMore,
-          );
+    () {
+      final isMore = panelType.value == PanelType.more;
+      return ToolbarIconButton(
+        tooltip: isMore ? '输入' : '更多',
+        onPressed: () {
+          if (isMore) {
+            updatePanelType(PanelType.keyboard);
+          } else {
+            updatePanelType(PanelType.more);
+          }
         },
+        icon: isMore
+            ? const Icon(Icons.keyboard, size: 22)
+            : const Icon(Icons.add_circle_outline, size: 22),
+        selected: isMore,
       );
+    },
+  );
 }

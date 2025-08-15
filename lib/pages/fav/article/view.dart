@@ -1,4 +1,3 @@
-import 'package:PiliPlus/common/constants.dart';
 import 'package:PiliPlus/common/skeleton/video_card_h.dart';
 import 'package:PiliPlus/common/widgets/dialog/dialog.dart';
 import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
@@ -20,8 +19,9 @@ class FavArticlePage extends StatefulWidget {
 
 class _FavArticlePageState extends State<FavArticlePage>
     with AutomaticKeepAliveClientMixin {
-  final FavArticleController _favArticleController =
-      Get.put(FavArticleController());
+  final FavArticleController _favArticleController = Get.put(
+    FavArticleController(),
+  );
 
   @override
   bool get wantKeepAlive => true;
@@ -37,11 +37,12 @@ class _FavArticlePageState extends State<FavArticlePage>
         slivers: [
           SliverPadding(
             padding: EdgeInsets.only(
-              top: StyleString.safeSpace - 5,
+              top: 7,
               bottom: MediaQuery.paddingOf(context).bottom + 80,
             ),
-            sliver:
-                Obx(() => _buildBody(_favArticleController.loadingState.value)),
+            sliver: Obx(
+              () => _buildBody(_favArticleController.loadingState.value),
+            ),
           ),
         ],
       ),
@@ -51,41 +52,42 @@ class _FavArticlePageState extends State<FavArticlePage>
   Widget _buildBody(LoadingState<List<FavArticleItemModel>?> loadingState) {
     return switch (loadingState) {
       Loading() => SliverGrid(
-          gridDelegate: Grid.videoCardHDelegate(context),
-          delegate: SliverChildBuilderDelegate(
-            (context, index) {
-              return const VideoCardHSkeleton();
-            },
-            childCount: 10,
-          ),
+        gridDelegate: Grid.videoCardHDelegate(context),
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            return const VideoCardHSkeleton();
+          },
+          childCount: 10,
         ),
-      Success(:var response) => response?.isNotEmpty == true
-          ? SliverGrid(
-              gridDelegate: Grid.videoCardHDelegate(context),
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  if (index == response.length - 1) {
-                    _favArticleController.onLoadMore();
-                  }
-                  final item = response[index];
-                  return FavArticleItem(
-                    item: item,
-                    onDelete: () => showConfirmDialog(
-                      context: context,
-                      title: '确定取消收藏？',
-                      onConfirm: () =>
-                          _favArticleController.onRemove(index, item.opusId),
-                    ),
-                  );
-                },
-                childCount: response!.length,
-              ),
-            )
-          : HttpError(onReload: _favArticleController.onReload),
+      ),
+      Success(:var response) =>
+        response?.isNotEmpty == true
+            ? SliverGrid(
+                gridDelegate: Grid.videoCardHDelegate(context),
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    if (index == response.length - 1) {
+                      _favArticleController.onLoadMore();
+                    }
+                    final item = response[index];
+                    return FavArticleItem(
+                      item: item,
+                      onDelete: () => showConfirmDialog(
+                        context: context,
+                        title: '确定取消收藏？',
+                        onConfirm: () =>
+                            _favArticleController.onRemove(index, item.opusId),
+                      ),
+                    );
+                  },
+                  childCount: response!.length,
+                ),
+              )
+            : HttpError(onReload: _favArticleController.onReload),
       Error(:var errMsg) => HttpError(
-          errMsg: errMsg,
-          onReload: _favArticleController.onReload,
-        ),
+        errMsg: errMsg,
+        onReload: _favArticleController.onReload,
+      ),
     };
   }
 }

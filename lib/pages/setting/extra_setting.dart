@@ -1,5 +1,4 @@
 import 'package:PiliPlus/pages/setting/models/extra_settings.dart';
-import 'package:PiliPlus/pages/setting/models/model.dart';
 import 'package:flutter/material.dart';
 
 class ExtraSetting extends StatefulWidget {
@@ -17,8 +16,9 @@ class _ExtraSettingState extends State<ExtraSetting> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar:
-          widget.showAppBar == false ? null : AppBar(title: const Text('其它设置')),
+      appBar: widget.showAppBar == false
+          ? null
+          : AppBar(title: const Text('其它设置')),
       body: ListView(
         padding: EdgeInsets.only(
           bottom: MediaQuery.paddingOf(context).bottom + 80,

@@ -1,5 +1,4 @@
-import 'package:PiliPlus/pages/common/multi_select_controller.dart'
-    show MultiSelectData;
+import 'package:PiliPlus/pages/common/multi_select/base.dart';
 
 class MentionItem with MultiSelectData {
   String? face;
@@ -17,12 +16,12 @@ class MentionItem with MultiSelectData {
   });
 
   factory MentionItem.fromJson(Map<String, dynamic> json) => MentionItem(
-        face: json['face'] as String?,
-        fans: json['fans'] as int?,
-        name: json['name'] as String?,
-        officialVerifyType: json['official_verify_type'] as int?,
-        uid: json['uid'] as String?,
-      );
+    face: json['face'] as String?,
+    fans: json['fans'] as int?,
+    name: json['name'] as String?,
+    officialVerifyType: json['official_verify_type'] as int?,
+    uid: json['uid'] as String?,
+  );
 
   @override
   bool operator ==(Object other) {

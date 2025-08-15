@@ -5,11 +5,13 @@ import 'package:PiliPlus/common/widgets/button/icon_button.dart';
 import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
 import 'package:PiliPlus/grpc/bilibili/main/community/reply/v1.pb.dart'
     show ReplyInfo;
+import 'package:PiliPlus/models/common/video/video_type.dart';
 import 'package:PiliPlus/models/dynamics/result.dart';
 import 'package:PiliPlus/pages/dynamics/widgets/dynamic_panel.dart';
 import 'package:PiliPlus/pages/video/introduction/pgc/controller.dart';
 import 'package:PiliPlus/pages/video/introduction/ugc/controller.dart';
 import 'package:PiliPlus/pages/video/reply/widgets/reply_item_grpc.dart';
+import 'package:PiliPlus/utils/context_ext.dart';
 import 'package:PiliPlus/utils/date_util.dart';
 import 'package:PiliPlus/utils/image_util.dart';
 import 'package:PiliPlus/utils/utils.dart';
@@ -17,7 +19,7 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
-import 'package:get/get.dart';
+import 'package:get/get.dart' hide ContextExtensionss;
 import 'package:intl/intl.dart' show DateFormat;
 import 'package:pretty_qr_code/pretty_qr_code.dart';
 import 'package:saver_gallery/saver_gallery.dart';
@@ -46,8 +48,10 @@ class SavePanel extends StatefulWidget {
       },
       transitionDuration: const Duration(milliseconds: 255),
       transitionBuilder: (context, animation, secondaryAnimation, child) {
-        var tween = Tween<double>(begin: 0, end: 1)
-            .chain(CurveTween(curve: Curves.easeInOut));
+        var tween = Tween<double>(
+          begin: 0,
+          end: 1,
+        ).chain(CurveTween(curve: Curves.easeInOut));
         return FadeTransition(
           opacity: animation.drive(tween),
           child: child,
@@ -79,30 +83,46 @@ class _SavePanelState extends State<SavePanel> {
   @override
   void initState() {
     super.initState();
-    if (_item is ReplyInfo) {
+    if (_item case ReplyInfo reply) {
       itemType = '评论';
       final currentRoute = Get.currentRoute;
-      late final hasRoot = _item.hasRoot();
+      late final hasRoot = reply.hasRoot();
 
       if (currentRoute.startsWith('/video')) {
         try {
-          final heroTag = Get.arguments?['heroTag'];
-          late final ctr = Get.find<VideoIntroController>(tag: heroTag);
-          cover = ctr.videoDetail.value.pic;
-          title = ctr.videoDetail.value.title;
-          pubdate = ctr.videoDetail.value.pubdate;
-          uname = ctr.videoDetail.value.owner?.name;
+          final heroTag = Get.arguments['heroTag'];
+          final videoType = Get.arguments['videoType'];
+          if (videoType == VideoType.pgc || videoType == VideoType.pugv) {
+            final ctr = Get.find<PgcIntroController>(tag: heroTag);
+            final pgcItem = ctr.pgcItem;
+            final episode = pgcItem.episodes!.firstWhere(
+              (e) => e.cid == ctr.cid.value,
+            );
+            cover = episode.cover;
+            title =
+                episode.shareCopy ??
+                '${pgcItem.title} ${episode.showTitle ?? episode.longTitle ?? ''}';
+            pubdate = episode.pubTime;
+            uname = pgcItem.upInfo?.uname;
+          } else {
+            final ctr = Get.find<UgcIntroController>(tag: heroTag);
+            final videoDetail = ctr.videoDetail.value;
+            cover = videoDetail.pic;
+            title = videoDetail.title;
+            pubdate = videoDetail.pubdate;
+            uname = videoDetail.owner?.name;
+          }
         } catch (_) {}
         uri =
-            'bilibili://video/${_item.oid}?comment_root_id=${hasRoot ? _item.root : _item.id}${hasRoot ? '&comment_secondary_id=${_item.id}' : ''}';
+            'bilibili://video/${reply.oid}?comment_root_id=${hasRoot ? reply.root : reply.id}${hasRoot ? '&comment_secondary_id=${reply.id}' : ''}';
 
         try {
-          final heroTag = Get.arguments?['heroTag'];
+          final heroTag = Get.arguments['heroTag'];
           late final ctr = Get.find<PgcIntroController>(tag: heroTag);
-          final type = _item.type.toInt();
-          late final oid = _item.oid;
-          late final rootId = hasRoot ? _item.root : _item.id;
-          late final anchor = hasRoot ? 'anchor=${_item.id}&' : '';
+          final type = reply.type.toInt();
+          late final oid = reply.oid;
+          late final rootId = hasRoot ? reply.root : reply.id;
+          late final anchor = hasRoot ? 'anchor=${reply.id}&' : '';
           uri =
               'bilibili://comment/detail/$type/$oid/$rootId/?${anchor}enterUri=bilibili://pgc/season/ep/${ctr.epId}';
         } catch (_) {}
@@ -110,17 +130,15 @@ class _SavePanelState extends State<SavePanel> {
         try {
           DynamicItemModel dynItem = Get.arguments['item'];
           uname = dynItem.modules.moduleAuthor?.name;
-          final type = _item.type.toInt();
+          final type = reply.type.toInt();
           late final oid = dynItem.idStr;
-          late final rootId = hasRoot ? _item.root : _item.id;
-          late final anchor = hasRoot ? 'anchor=${_item.id}&' : '';
+          late final rootId = hasRoot ? reply.root : reply.id;
+          late final anchor = hasRoot ? 'anchor=${reply.id}&' : '';
           late final enterUri = parseDyn(dynItem);
           viewType = '查看';
           itemType = '评论';
           uri = switch (type) {
-            1 ||
-            11 ||
-            12 =>
+            1 || 11 || 12 =>
               'bilibili://comment/detail/$type/${dynItem.basic!.ridStr}/$rootId/?${anchor}enterUri=$enterUri',
             _ =>
               'bilibili://comment/detail/$type/$oid/$rootId/?${anchor}enterUri=$enterUri',
@@ -128,15 +146,13 @@ class _SavePanelState extends State<SavePanel> {
         } catch (_) {}
       } else if (currentRoute.startsWith('/Scaffold')) {
         try {
-          final type = _item.type.toInt();
+          final type = reply.type.toInt();
           late final oid = Get.arguments['oid'];
-          late final rootId = hasRoot ? _item.root : _item.id;
-          late final anchor = hasRoot ? 'anchor=${_item.id}&' : '';
+          late final rootId = hasRoot ? reply.root : reply.id;
+          late final anchor = hasRoot ? 'anchor=${reply.id}&' : '';
           late final enterUri = 'bilibili://following/detail/$oid';
           uri = switch (type) {
-            1 ||
-            11 ||
-            12 =>
+            1 || 11 || 12 =>
               'bilibili://comment/detail/$type/$oid/$rootId/?${anchor}enterUri=${Get.arguments['enterUri']}',
             _ =>
               'bilibili://comment/detail/$type/$oid/$rootId/?${anchor}enterUri=$enterUri',
@@ -144,10 +160,10 @@ class _SavePanelState extends State<SavePanel> {
         } catch (_) {}
       } else if (currentRoute.startsWith('/articlePage')) {
         try {
-          final type = _item.type.toInt();
-          late final oid = _item.oid;
-          late final rootId = hasRoot ? _item.root : _item.id;
-          late final anchor = hasRoot ? 'anchor=${_item.id}&' : '';
+          final type = reply.type.toInt();
+          late final oid = reply.oid;
+          late final rootId = hasRoot ? reply.root : reply.id;
+          late final anchor = hasRoot ? 'anchor=${reply.id}&' : '';
           late final enterUri =
               'bilibili://following/detail/${Get.parameters['id'] ?? Get.arguments?['id']}';
           uri =
@@ -156,21 +172,21 @@ class _SavePanelState extends State<SavePanel> {
       }
 
       if (kDebugMode) debugPrint(uri);
-    } else if (_item is DynamicItemModel) {
-      uri = parseDyn(_item);
+    } else if (_item case DynamicItemModel i) {
+      uri = parseDyn(i);
 
       if (kDebugMode) debugPrint(uri);
     }
   }
 
-  String parseDyn(dynamic item) {
+  String parseDyn(DynamicItemModel item) {
     String uri = '';
     try {
       switch (item.type) {
         case 'DYNAMIC_TYPE_AV':
           viewType = '观看';
           itemType = '视频';
-          uri = 'bilibili://video/${item.basic.commentIdStr}';
+          uri = 'bilibili://video/${item.basic!.commentIdStr}';
           break;
 
         case 'DYNAMIC_TYPE_ARTICLE':
@@ -181,14 +197,14 @@ class _SavePanelState extends State<SavePanel> {
         case 'DYNAMIC_TYPE_LIVE_RCMD':
           viewType = '观看';
           itemType = '直播';
-          final roomId = item.modules.moduleDynamic.major.liveRcmd.roomId;
+          final roomId = item.modules.moduleDynamic!.major!.liveRcmd!.roomId;
           uri = 'bilibili://live/$roomId';
           break;
 
         case 'DYNAMIC_TYPE_UGC_SEASON':
           viewType = '观看';
           itemType = '合集';
-          int aid = item.modules.moduleDynamic.major.ugcSeason.aid;
+          final aid = item.modules.moduleDynamic!.major!.ugcSeason!.aid;
           uri = 'bilibili://video/$aid';
           break;
 
@@ -196,15 +212,15 @@ class _SavePanelState extends State<SavePanel> {
         case 'DYNAMIC_TYPE_PGC_UNION':
           viewType = '观看';
           itemType =
-              item?.modules?.moduleDynamic?.major?.pgc?.badge?['text'] ?? '番剧';
-          final epid = item.modules.moduleDynamic.major.pgc.epid;
+              item.modules.moduleDynamic?.major?.pgc?.badge?.text ?? '番剧';
+          final epid = item.modules.moduleDynamic!.major!.pgc!.epid;
           uri = 'bilibili://pgc/season/ep/$epid';
           break;
 
         // https://www.bilibili.com/medialist/detail/ml12345678
         case 'DYNAMIC_TYPE_MEDIALIST':
           itemType = '收藏夹';
-          final mediaId = item.modules.moduleDynamic.major.medialist!['id'];
+          final mediaId = item.modules.moduleDynamic!.major!.medialist!.id;
           uri = 'bilibili://medialist/detail/$mediaId';
           break;
 
@@ -233,8 +249,9 @@ class _SavePanelState extends State<SavePanel> {
     }
     SmartDialog.showLoading();
     try {
-      RenderRepaintBoundary boundary = boundaryKey.currentContext!
-          .findRenderObject() as RenderRepaintBoundary;
+      RenderRepaintBoundary boundary =
+          boundaryKey.currentContext!.findRenderObject()
+              as RenderRepaintBoundary;
       var image = await boundary.toImage(pixelRatio: 3);
       ByteData? byteData = await image.toByteData(format: ImageByteFormat.png);
       Uint8List pngBytes = byteData!.buffer.asUint8List();
@@ -243,17 +260,17 @@ class _SavePanelState extends State<SavePanel> {
       if (isShare) {
         Get.back();
         SmartDialog.dismiss();
-        Share.shareXFiles(
-          [
-            XFile.fromData(
-              pngBytes,
-              name: picName,
-              mimeType: 'image/png',
-            )
-          ],
-          sharePositionOrigin: await Utils.isIpad()
-              ? Rect.fromLTWH(0, 0, Get.width, Get.height / 2)
-              : null,
+        SharePlus.instance.share(
+          ShareParams(
+            files: [
+              XFile.fromData(
+                pngBytes,
+                name: picName,
+                mimeType: 'image/png',
+              ),
+            ],
+            sharePositionOrigin: await Utils.sharePositionOrigin,
+          ),
         );
       } else {
         final result = await SaverGallery.saveImage(
@@ -300,8 +317,9 @@ class _SavePanelState extends State<SavePanel> {
                       clipBehavior: Clip.hardEdge,
                       decoration: BoxDecoration(
                         color: theme.colorScheme.surface,
-                        borderRadius:
-                            const BorderRadius.all(Radius.circular(12)),
+                        borderRadius: const BorderRadius.all(
+                          Radius.circular(12),
+                        ),
                       ),
                       child: AnimatedSize(
                         curve: Curves.easeInOut,
@@ -322,10 +340,13 @@ class _SavePanelState extends State<SavePanel> {
                               )
                             else if (_item is DynamicItemModel)
                               IgnorePointer(
-                                child: DynamicPanel(
-                                  item: _item,
-                                  isDetail: true,
-                                  isSave: true,
+                                child: LayoutBuilder(
+                                  builder: (_, constrains) => DynamicPanel(
+                                    item: _item,
+                                    isDetail: true,
+                                    isSave: true,
+                                    maxWidth: constrains.maxWidth,
+                                  ),
                                 ),
                               ),
                             if (cover?.isNotEmpty == true &&
@@ -333,23 +354,28 @@ class _SavePanelState extends State<SavePanel> {
                               Container(
                                 height: 81,
                                 clipBehavior: Clip.hardEdge,
-                                margin:
-                                    const EdgeInsets.symmetric(horizontal: 12),
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                ),
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
                                   color: theme.colorScheme.onInverseSurface,
                                   borderRadius: const BorderRadius.all(
-                                      Radius.circular(8)),
+                                    Radius.circular(8),
+                                  ),
                                 ),
                                 child: Row(
                                   children: [
                                     NetworkImgLayer(
                                       radius: 6,
                                       src: cover!,
-                                      height: MediaQuery.textScalerOf(context)
-                                          .scale(65),
-                                      width: MediaQuery.textScalerOf(context)
-                                              .scale(65) *
+                                      height: MediaQuery.textScalerOf(
+                                        context,
+                                      ).scale(65),
+                                      width:
+                                          MediaQuery.textScalerOf(
+                                            context,
+                                          ).scale(65) *
                                           16 /
                                           9,
                                       quality: 100,
@@ -368,9 +394,10 @@ class _SavePanelState extends State<SavePanel> {
                                           if (pubdate != null) ...[
                                             const Spacer(),
                                             Text(
-                                              DateUtil.format(pubdate,
-                                                  format:
-                                                      DateUtil.longFormatDs),
+                                              DateUtil.format(
+                                                pubdate,
+                                                format: DateUtil.longFormatDs,
+                                              ),
                                               style: TextStyle(
                                                 color:
                                                     theme.colorScheme.outline,
@@ -418,7 +445,8 @@ class _SavePanelState extends State<SavePanel> {
                                                       '识别二维码，$viewType$itemType',
                                                       textAlign: TextAlign.end,
                                                       style: TextStyle(
-                                                        color: theme.colorScheme
+                                                        color: theme
+                                                            .colorScheme
                                                             .onSurfaceVariant,
                                                       ),
                                                     ),
@@ -426,11 +454,13 @@ class _SavePanelState extends State<SavePanel> {
                                                     Text(
                                                       DateUtil.longFormatDs
                                                           .format(
-                                                              DateTime.now()),
+                                                            DateTime.now(),
+                                                          ),
                                                       textAlign: TextAlign.end,
                                                       style: TextStyle(
                                                         fontSize: 13,
-                                                        color: theme.colorScheme
+                                                        color: theme
+                                                            .colorScheme
                                                             .outline,
                                                       ),
                                                     ),
@@ -440,25 +470,25 @@ class _SavePanelState extends State<SavePanel> {
                                               Container(
                                                 width: 100,
                                                 height: 100,
-                                                padding:
-                                                    const EdgeInsets.all(12),
+                                                padding: const EdgeInsets.all(
+                                                  12,
+                                                ),
                                                 child: Container(
                                                   color: Get.isDarkMode
                                                       ? Colors.white
                                                       : theme
-                                                          .colorScheme.surface,
-                                                  padding:
-                                                      const EdgeInsets.all(3),
+                                                            .colorScheme
+                                                            .surface,
+                                                  padding: const EdgeInsets.all(
+                                                    3,
+                                                  ),
                                                   child: PrettyQrView.data(
                                                     data: uri,
                                                     decoration:
                                                         const PrettyQrDecoration(
-                                                      shape:
-                                                          PrettyQrRoundedSymbol(
-                                                        borderRadius:
-                                                            BorderRadius.zero,
-                                                      ),
-                                                    ),
+                                                          shape:
+                                                              PrettyQrSquaresSymbol(),
+                                                        ),
                                                   ),
                                                 ),
                                               ),
@@ -471,7 +501,8 @@ class _SavePanelState extends State<SavePanel> {
                                           'assets/images/logo/logo_2.png',
                                           width: 100,
                                           color: theme
-                                              .colorScheme.onSurfaceVariant,
+                                              .colorScheme
+                                              .onSurfaceVariant,
                                         ),
                                       ),
                                     ],
@@ -518,15 +549,16 @@ class _SavePanelState extends State<SavePanel> {
                     ),
                     const SizedBox(width: 40),
                     iconButton(
-                        size: 42,
-                        tooltip: showBottom ? '隐藏' : '显示',
-                        context: context,
-                        icon: showBottom
-                            ? Icons.visibility_off
-                            : Icons.visibility,
-                        onPressed: () => setState(() {
-                              showBottom = !showBottom;
-                            })),
+                      size: 42,
+                      tooltip: showBottom ? '隐藏' : '显示',
+                      context: context,
+                      icon: showBottom
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                      onPressed: () => setState(() {
+                        showBottom = !showBottom;
+                      }),
+                    ),
                     const SizedBox(width: 40),
                     iconButton(
                       size: 42,

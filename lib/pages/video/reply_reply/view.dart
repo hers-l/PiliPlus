@@ -4,14 +4,15 @@ import 'package:PiliPlus/common/widgets/refresh_indicator.dart';
 import 'package:PiliPlus/grpc/bilibili/main/community/reply/v1.pb.dart'
     show ReplyInfo, Mode;
 import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/pages/common/common_slide_page.dart';
+import 'package:PiliPlus/pages/common/slide/common_slide_page.dart';
 import 'package:PiliPlus/pages/video/reply/widgets/reply_item_grpc.dart';
 import 'package:PiliPlus/pages/video/reply_reply/controller.dart';
+import 'package:PiliPlus/utils/context_ext.dart';
 import 'package:PiliPlus/utils/num_util.dart';
 import 'package:PiliPlus/utils/page_utils.dart';
 import 'package:PiliPlus/utils/utils.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:get/get.dart' hide ContextExtensionss;
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 class VideoReplyReplyPanel extends CommonSlidePage {
@@ -28,7 +29,6 @@ class VideoReplyReplyPanel extends CommonSlidePage {
     this.isDialogue = false,
     this.onViewImage,
     this.onDismissed,
-    this.onDispose,
   });
   final int? id;
   final int oid;
@@ -40,7 +40,6 @@ class VideoReplyReplyPanel extends CommonSlidePage {
   final bool isDialogue;
   final VoidCallback? onViewImage;
   final ValueChanged<int>? onDismissed;
-  final VoidCallback? onDispose;
 
   @override
   State<VideoReplyReplyPanel> createState() => _VideoReplyReplyPanelState();
@@ -52,14 +51,15 @@ class _VideoReplyReplyPanelState
   late final itemPositionsListener = ItemPositionsListener.create();
   late final _key = GlobalKey<ScaffoldState>();
   late final _listKey = GlobalKey();
-  late final _tag =
-      Utils.makeHeroTag('${widget.rpid}${widget.dialog}${widget.isDialogue}');
+  late final _tag = Utils.makeHeroTag(
+    '${widget.rpid}${widget.dialog}${widget.isDialogue}',
+  );
 
   ReplyInfo? get firstFloor => widget.firstFloor ?? _controller.firstFloor;
 
   bool get _horizontalPreview =>
-      context.orientation == Orientation.landscape &&
-      _controller.horizontalPreview;
+      _controller.horizontalPreview && context.isLandscape;
+  Function(List<String> imgList, int index)? _imageCallback;
 
   Animation<Color?>? colorAnimation;
 
@@ -82,33 +82,20 @@ class _VideoReplyReplyPanelState
 
   @override
   void dispose() {
-    widget.onDispose?.call();
     Get.delete<VideoReplyReplyController>(tag: _tag);
     super.dispose();
   }
 
-  Widget _header(ThemeData theme) => firstFloor == null
-      ? _sortWidget(theme)
-      : ValueListenableBuilder<Iterable<ItemPosition>>(
-          valueListenable: itemPositionsListener.itemPositions,
-          builder: (context, positions, child) {
-            int min = -1;
-            if (positions.isNotEmpty) {
-              min = positions
-                  .where(
-                      (ItemPosition position) => position.itemTrailingEdge > 0)
-                  .reduce((ItemPosition min, ItemPosition position) =>
-                      position.itemTrailingEdge < min.itemTrailingEdge
-                          ? position
-                          : min)
-                  .index;
-            }
-            return min >= 2 ? _sortWidget(theme) : const SizedBox.shrink();
-          },
-        );
-
   @override
   Widget buildPage(ThemeData theme) {
+    _imageCallback = _horizontalPreview
+        ? (imgList, index) => PageUtils.onHorizontalPreview(
+            _key,
+            this,
+            imgList,
+            index,
+          )
+        : null;
     return Scaffold(
       key: _key,
       resizeToAvoidBottomInset: false,
@@ -142,9 +129,7 @@ class _VideoReplyReplyPanelState
                   height: 1,
                   color: theme.dividerColor.withValues(alpha: 0.1),
                 ),
-          Expanded(
-            child: enableSlide ? slideList(theme) : buildList(theme),
-          ),
+          Expanded(child: enableSlide ? slideList(theme) : buildList(theme)),
         ],
       ),
     );
@@ -168,19 +153,25 @@ class _VideoReplyReplyPanelState
                 itemBuilder: (context, index) {
                   if (widget.isDialogue) {
                     return _buildBody(
-                        theme, _controller.loadingState.value, index);
+                      theme,
+                      _controller.loadingState.value,
+                      index,
+                    );
                   } else if (firstFloor != null) {
                     if (index == 0) {
                       return ReplyItemGrpc(
                         replyItem: firstFloor!,
                         replyLevel: 2,
                         needDivider: false,
-                        onReply: (replyItem) => _controller.onReply(context,
-                            replyItem: replyItem, index: -1),
+                        onReply: (replyItem) => _controller.onReply(
+                          context,
+                          replyItem: replyItem,
+                          index: -1,
+                        ),
                         upMid: _controller.upMid,
                         onViewImage: widget.onViewImage,
                         onDismissed: widget.onDismissed,
-                        callback: _getImageCallback,
+                        callback: _imageCallback,
                         onCheckReply: (item) =>
                             _controller.onCheckReply(item, isManual: true),
                       );
@@ -222,140 +213,140 @@ class _VideoReplyReplyPanelState
     );
   }
 
-  Widget _sortWidget(ThemeData theme) => Container(
-        height: 40,
-        padding: const EdgeInsets.fromLTRB(12, 0, 6, 0),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
-          boxShadow: [
-            BoxShadow(
-              color: theme.colorScheme.surface,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Obx(
-              () => _controller.count.value != -1
-                  ? Text(
-                      '相关回复共${NumUtil.numFormat(_controller.count.value)}条',
-                      style: const TextStyle(fontSize: 13),
-                    )
-                  : const SizedBox.shrink(),
-            ),
-            SizedBox(
-              height: 35,
-              child: TextButton.icon(
-                onPressed: () => _controller.queryBySort(),
-                icon: Icon(
-                  Icons.sort,
-                  size: 16,
-                  color: theme.colorScheme.secondary,
-                ),
-                label: Obx(
-                  () => Text(
-                    _controller.mode.value == Mode.MAIN_LIST_HOT
-                        ? '按热度'
-                        : '按时间',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: theme.colorScheme.secondary,
-                    ),
-                  ),
-                ),
-              ),
-            )
-          ],
-        ),
-      );
-
-  Function(List<String>, int)? get _getImageCallback => _horizontalPreview
-      ? (imgList, index) {
-          final ctr = AnimationController(
-            vsync: this,
-            duration: const Duration(milliseconds: 200),
-          )..forward();
-          PageUtils.onHorizontalPreview(
-            _key,
-            AnimationController(
-              vsync: this,
-              duration: Duration.zero,
-            ),
-            ctr,
-            imgList,
-            index,
-            (value) async {
-              if (value == false) {
-                await ctr.reverse();
-              }
-              try {
-                ctr.dispose();
-              } catch (_) {}
-              if (value == false) {
-                Get.back();
-              }
-            },
-          );
-        }
-      : null;
-
-  Widget _buildBody(
-      ThemeData theme, LoadingState<List<ReplyInfo>?> loadingState, int index) {
-    return switch (loadingState) {
-      Loading() => IgnorePointer(
-          child: ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemBuilder: (context, index) {
-              return const VideoReplySkeleton();
-            },
-            itemCount: 8,
-          ),
-        ),
-      Success(:var response) => Builder(
-          builder: (context) {
-            if (index == response!.length) {
-              _controller.onLoadMore();
-              return Container(
-                alignment: Alignment.center,
-                margin: EdgeInsets.only(
-                    bottom: MediaQuery.paddingOf(context).bottom),
-                height: 125,
-                child: Text(
-                  _controller.isEnd ? '没有更多了' : '加载中...',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: theme.colorScheme.outline,
-                  ),
-                ),
-              );
-            } else {
-              if (_controller.index != null && _controller.index == index) {
-                colorAnimation ??= ColorTween(
-                  begin: theme.colorScheme.onInverseSurface,
-                  end: theme.colorScheme.surface,
-                ).animate(_controller.controller!);
-                return AnimatedBuilder(
-                  animation: colorAnimation!,
-                  builder: (context, child) {
-                    return ColoredBox(
-                      color: colorAnimation!.value ??
-                          theme.colorScheme.onInverseSurface,
-                      child: _replyItem(response[index], index),
-                    );
-                  },
-                );
-              }
-              return _replyItem(response[index], index);
+  Widget _header(ThemeData theme) => firstFloor == null
+      ? _sortWidget(theme)
+      : ValueListenableBuilder<Iterable<ItemPosition>>(
+          valueListenable: itemPositionsListener.itemPositions,
+          builder: (context, positions, child) {
+            int min = -1;
+            if (positions.isNotEmpty) {
+              min = positions
+                  .where(
+                    (ItemPosition position) => position.itemTrailingEdge > 0,
+                  )
+                  .reduce(
+                    (ItemPosition min, ItemPosition position) =>
+                        position.itemTrailingEdge < min.itemTrailingEdge
+                        ? position
+                        : min,
+                  )
+                  .index;
             }
+            return min >= 2 ? _sortWidget(theme) : const SizedBox.shrink();
+          },
+        );
+
+  Widget _sortWidget(ThemeData theme) => Container(
+    height: 40,
+    padding: const EdgeInsets.fromLTRB(12, 0, 6, 0),
+    decoration: BoxDecoration(
+      color: theme.colorScheme.surface,
+      boxShadow: [
+        BoxShadow(
+          color: theme.colorScheme.surface,
+          offset: const Offset(0, -2),
+        ),
+      ],
+    ),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Obx(
+          () {
+            final count = _controller.count.value;
+            return count != -1
+                ? Text(
+                    '相关回复共${NumUtil.numFormat(count)}条',
+                    style: const TextStyle(fontSize: 13),
+                  )
+                : const SizedBox.shrink();
           },
         ),
-      Error(:var errMsg) => errorWidget(
-          errMsg: errMsg,
-          onReload: _controller.onReload,
+        SizedBox(
+          height: 35,
+          child: TextButton.icon(
+            onPressed: _controller.queryBySort,
+            icon: Icon(
+              Icons.sort,
+              size: 16,
+              color: theme.colorScheme.secondary,
+            ),
+            label: Obx(
+              () => Text(
+                _controller.mode.value == Mode.MAIN_LIST_HOT ? '按热度' : '按时间',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: theme.colorScheme.secondary,
+                ),
+              ),
+            ),
+          ),
         ),
+      ],
+    ),
+  );
+
+  Widget _buildBody(
+    ThemeData theme,
+    LoadingState<List<ReplyInfo>?> loadingState,
+    int index,
+  ) {
+    return switch (loadingState) {
+      Loading() => IgnorePointer(
+        child: ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemBuilder: (context, index) {
+            return const VideoReplySkeleton();
+          },
+          itemCount: 8,
+        ),
+      ),
+      Success(:var response) => Builder(
+        builder: (context) {
+          if (index == response!.length) {
+            _controller.onLoadMore();
+            return Container(
+              alignment: Alignment.center,
+              margin: EdgeInsets.only(
+                bottom: MediaQuery.paddingOf(context).bottom,
+              ),
+              height: 125,
+              child: Text(
+                _controller.isEnd ? '没有更多了' : '加载中...',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: theme.colorScheme.outline,
+                ),
+              ),
+            );
+          } else {
+            final child = _replyItem(response[index], index);
+            if (_controller.index != null && _controller.index == index) {
+              colorAnimation ??= ColorTween(
+                begin: theme.colorScheme.onInverseSurface,
+                end: theme.colorScheme.surface,
+              ).animate(_controller.controller!);
+              return AnimatedBuilder(
+                animation: colorAnimation!,
+                builder: (context, _) {
+                  return ColoredBox(
+                    color:
+                        colorAnimation!.value ??
+                        theme.colorScheme.onInverseSurface,
+                    child: child,
+                  );
+                },
+              );
+            }
+            return child;
+          }
+        },
+      ),
+      Error(:var errMsg) => errorWidget(
+        errMsg: errMsg,
+        onReload: _controller.onReload,
+      ),
     };
   }
 
@@ -365,9 +356,7 @@ class _VideoReplyReplyPanelState
       replyLevel: widget.isDialogue ? 3 : 2,
       onReply: (replyItem) =>
           _controller.onReply(context, replyItem: replyItem, index: index),
-      onDelete: (item, subIndex) {
-        _controller.onRemove(index, item, null);
-      },
+      onDelete: (item, subIndex) => _controller.onRemove(index, item, null),
       upMid: _controller.upMid,
       showDialogue: () => _key.currentState?.showBottomSheet(
         backgroundColor: Colors.transparent,
@@ -382,7 +371,7 @@ class _VideoReplyReplyPanelState
       ),
       onViewImage: widget.onViewImage,
       onDismissed: widget.onDismissed,
-      callback: _getImageCallback,
+      callback: _imageCallback,
       onCheckReply: (item) => _controller.onCheckReply(item, isManual: true),
     );
   }

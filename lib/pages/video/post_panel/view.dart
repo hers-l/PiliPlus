@@ -10,17 +10,18 @@ import 'package:PiliPlus/models/common/sponsor_block/action_type.dart';
 import 'package:PiliPlus/models/common/sponsor_block/post_segment_model.dart';
 import 'package:PiliPlus/models/common/sponsor_block/segment_type.dart';
 import 'package:PiliPlus/models_new/sponsor_block/segment_item.dart';
-import 'package:PiliPlus/pages/common/common_collapse_slide_page.dart';
+import 'package:PiliPlus/pages/common/slide/common_collapse_slide_page.dart';
 import 'package:PiliPlus/pages/video/controller.dart';
 import 'package:PiliPlus/plugin/pl_player/controller.dart';
 import 'package:PiliPlus/utils/duration_util.dart';
+import 'package:PiliPlus/utils/extension.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show FilteringTextInputFormatter;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
-import 'package:get/get.dart';
+import 'package:get/get.dart' hide Response;
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 
 class PostPanel extends CommonCollapseSlidePage {
@@ -39,16 +40,24 @@ class PostPanel extends CommonCollapseSlidePage {
 }
 
 class _PostPanelState extends CommonCollapseSlidePageState<PostPanel> {
-  VideoDetailController get videoDetailController =>
+  late final VideoDetailController videoDetailController =
       widget.videoDetailController;
-  PlPlayerController get plPlayerController => widget.plPlayerController;
-  List<PostSegmentModel>? get list => videoDetailController.postList;
+  late final PlPlayerController plPlayerController = widget.plPlayerController;
+  late final List<PostSegmentModel>? list = videoDetailController.postList;
 
   late final double videoDuration =
       plPlayerController.durationSeconds.value.inMilliseconds / 1000;
 
   double get currentPos =>
       plPlayerController.position.value.inMilliseconds / 1000;
+
+  final _controller = ScrollController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget buildPage(ThemeData theme) {
@@ -95,59 +104,58 @@ class _PostPanelState extends CommonCollapseSlidePageState<PostPanel> {
 
   @override
   Widget buildList(ThemeData theme) {
-    return list?.isNotEmpty == true
-        ? Stack(
-            clipBehavior: Clip.none,
-            children: [
-              SingleChildScrollView(
-                controller: ScrollController(),
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.only(
-                    bottom: 88 + MediaQuery.paddingOf(context).bottom),
-                child: Column(
-                  children: List.generate(
-                    list!.length,
-                    (index) {
-                      return _buildItem(theme, index, list![index]);
-                    },
-                  ),
-                ),
-              ),
-              Positioned(
-                right: 16,
-                bottom: 16 + MediaQuery.paddingOf(context).bottom,
-                child: FloatingActionButton(
-                  tooltip: '提交',
-                  onPressed: () => showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('确定无误再提交'),
-                      actions: [
-                        TextButton(
-                          onPressed: Get.back,
-                          child: Text(
-                            '取消',
-                            style: TextStyle(
-                              color: theme.colorScheme.outline,
-                            ),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            Get.back();
-                            _onPost();
-                          },
-                          child: const Text('确定提交'),
-                        ),
-                      ],
+    if (list.isNullOrEmpty) {
+      return errorWidget();
+    }
+    final bottom = MediaQuery.paddingOf(context).bottom;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        SingleChildScrollView(
+          controller: _controller,
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.only(bottom: 88 + bottom),
+          child: Column(
+            children: List.generate(
+              list!.length,
+              (index) {
+                return _buildItem(theme, index, list![index]);
+              },
+            ),
+          ),
+        ),
+        Positioned(
+          right: 16,
+          bottom: 16 + bottom,
+          child: FloatingActionButton(
+            tooltip: '提交',
+            onPressed: () => showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('确定无误再提交'),
+                actions: [
+                  TextButton(
+                    onPressed: Get.back,
+                    child: Text(
+                      '取消',
+                      style: TextStyle(color: theme.colorScheme.outline),
                     ),
                   ),
-                  child: const Icon(Icons.check),
-                ),
-              )
-            ],
-          )
-        : errorWidget();
+                  TextButton(
+                    onPressed: () {
+                      Get.back();
+                      _onPost();
+                    },
+                    child: const Text('确定提交'),
+                  ),
+                ],
+              ),
+            ),
+            child: const Icon(Icons.check),
+          ),
+        ),
+      ],
+    );
   }
 
   void updateSegment({
@@ -173,7 +181,8 @@ class _PostPanelState extends CommonCollapseSlidePageState<PostPanel> {
     required bool isFirst,
   }) {
     String value = DurationUtil.formatDuration(
-        isFirst ? item.segment.first : item.segment.second);
+      isFirst ? item.segment.first : item.segment.second,
+    );
     return [
       Text(
         '${isFirst ? '开始' : '结束'}: $value',
@@ -223,9 +232,7 @@ class _PostPanelState extends CommonCollapseSlidePageState<PostPanel> {
                 content: TextFormField(
                   initialValue: value,
                   autofocus: true,
-                  onChanged: (value) {
-                    initV = value;
-                  },
+                  onChanged: (value) => initV = value,
                   inputFormatters: [
                     FilteringTextInputFormatter.allow(RegExp(r'[\d:.]+')),
                   ],
@@ -248,8 +255,11 @@ class _PostPanelState extends CommonCollapseSlidePageState<PostPanel> {
           ).then((res) {
             if (res != null) {
               try {
-                List<num> split =
-                    res.split(':').reversed.map((e) => num.parse(e)).toList();
+                List<num> split = res
+                    .split(':')
+                    .reversed
+                    .map((e) => num.parse(e))
+                    .toList();
                 double duration = 0;
                 for (int i = 0; i < split.length; i++) {
                   duration += split[i] * pow(60, i);
@@ -275,63 +285,71 @@ class _PostPanelState extends CommonCollapseSlidePageState<PostPanel> {
   void _onPost() {
     Request()
         .post(
-      '${widget.videoDetailController.blockServer}/api/skipSegments',
-      data: {
-        'videoID': videoDetailController.bvid,
-        'cid': videoDetailController.cid.value.toString(),
-        'userID': Pref.blockUserID.toString(),
-        'userAgent': Constants.userAgent,
-        'videoDuration': videoDuration,
-        'segments': list!
-            .map(
-              (item) => {
-                'segment': [
-                  item.segment.first,
-                  item.segment.second,
-                ],
-                'category': item.category.name,
-                'actionType': item.actionType.name,
-              },
-            )
-            .toList(),
-      },
-      options: Options(
-        followRedirects: true, // Defaults to true.
-        validateStatus: (int? status) {
-          return (status! >= 200 && status < 300) ||
-              const [400, 403, 429, 409] // reduce extra toast
-                  .contains(status);
-        },
-      ),
-    )
+          '${widget.videoDetailController.blockServer}/api/skipSegments',
+          data: {
+            'videoID': videoDetailController.bvid,
+            'cid': videoDetailController.cid.value.toString(),
+            'userID': Pref.blockUserID.toString(),
+            'userAgent': Constants.userAgent,
+            'videoDuration': videoDuration,
+            'segments': list!
+                .map(
+                  (item) => {
+                    'segment': [
+                      item.segment.first,
+                      item.segment.second,
+                    ],
+                    'category': item.category.name,
+                    'actionType': item.actionType.name,
+                  },
+                )
+                .toList(),
+          },
+          options: Options(
+            followRedirects: true, // Defaults to true.
+            validateStatus: (int? status) {
+              return (status! >= 200 && status < 300) ||
+                  const [400, 403, 429, 409] // reduce extra toast
+                      .contains(status);
+            },
+          ),
+        )
         .then(
-      (res) {
-        if (res.statusCode == 200) {
-          Get.back();
-          SmartDialog.showToast('提交成功');
-          list?.clear();
-          if (res.data case List list) {
-            videoDetailController.handleSBData(
-                list.map((e) => SegmentItemModel.fromJson(e)).toList());
-          }
-          plPlayerController.segmentList.value =
-              videoDetailController.segmentProgressList ?? <Segment>[];
-          if (videoDetailController.positionSubscription == null) {
-            videoDetailController.initSkip();
-          }
-        } else {
-          SmartDialog.showToast(
-            '提交失败: ${switch (res.statusCode) {
-              400 => '参数错误',
-              403 => '被自动审核机制拒绝',
-              429 => '重复提交太快',
-              409 => '重复提交',
-              _ => res.statusCode.toString()
-            }}',
-          );
-        }
-      },
-    );
+          (res) {
+            if (res.statusCode == 200) {
+              Get.back();
+              SmartDialog.showToast('提交成功');
+              list?.clear();
+              if (res.data case List list) {
+                videoDetailController.handleSBData(
+                  list.map((e) => SegmentItemModel.fromJson(e)).toList(),
+                );
+              }
+              plPlayerController.segmentList.value =
+                  videoDetailController.segmentProgressList ?? <Segment>[];
+              if (videoDetailController.positionSubscription == null) {
+                videoDetailController.initSkip();
+              }
+            } else {
+              SmartDialog.showToast('提交失败: ${_errMsg(res)}');
+            }
+          },
+        );
+  }
+
+  String _errMsg(Response res) {
+    if (res.data case String e) {
+      if (e.isNotEmpty) {
+        return e;
+      }
+    }
+    return switch (res.statusCode) {
+      400 => '参数错误',
+      403 => '被自动审核机制拒绝',
+      429 => '重复提交太快',
+      409 => '重复提交',
+      _ => '${res.data}(${res.statusCode})',
+    };
   }
 
   Widget _buildItem(ThemeData theme, int index, PostSegmentModel item) {
@@ -427,10 +445,12 @@ class _PostPanelState extends CommonCollapseSlidePageState<PostPanel> {
                               (context as Element).markNeedsBuild();
                             },
                             itemBuilder: (context) => SegmentType.values
-                                .map((e) => PopupMenuItem<SegmentType>(
-                                      value: e,
-                                      child: Text(e.title),
-                                    ))
+                                .map(
+                                  (e) => PopupMenuItem<SegmentType>(
+                                    value: e,
+                                    child: Text(e.title),
+                                  ),
+                                )
                                 .toList(),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -449,8 +469,9 @@ class _PostPanelState extends CommonCollapseSlidePageState<PostPanel> {
                                 ),
                                 Icon(
                                   MdiIcons.unfoldMoreHorizontal,
-                                  size: MediaQuery.textScalerOf(context)
-                                      .scale(14),
+                                  size: MediaQuery.textScalerOf(
+                                    context,
+                                  ).scale(14),
                                   color: theme.colorScheme.secondary,
                                 ),
                               ],
@@ -478,8 +499,8 @@ class _PostPanelState extends CommonCollapseSlidePageState<PostPanel> {
                             itemBuilder: (context) => ActionType.values
                                 .map(
                                   (e) => PopupMenuItem<ActionType>(
-                                    enabled:
-                                        item.category.toActionType.contains(e),
+                                    enabled: item.category.toActionType
+                                        .contains(e),
                                     value: e,
                                     child: Text(e.title),
                                   ),
@@ -502,8 +523,9 @@ class _PostPanelState extends CommonCollapseSlidePageState<PostPanel> {
                                 ),
                                 Icon(
                                   MdiIcons.unfoldMoreHorizontal,
-                                  size: MediaQuery.textScalerOf(context)
-                                      .scale(14),
+                                  size: MediaQuery.textScalerOf(
+                                    context,
+                                  ).scale(14),
                                   color: theme.colorScheme.secondary,
                                 ),
                               ],
@@ -548,7 +570,10 @@ class _PostPanelState extends CommonCollapseSlidePageState<PostPanel> {
                     await widget.plPlayerController.videoPlayerController!.seek(
                       Duration(milliseconds: start),
                     );
-                    if (!widget.plPlayerController.videoPlayerController!.state
+                    if (!widget
+                        .plPlayerController
+                        .videoPlayerController!
+                        .state
                         .playing) {
                       await widget.plPlayerController.videoPlayerController!
                           .play();

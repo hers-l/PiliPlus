@@ -1,6 +1,6 @@
 import 'package:PiliPlus/models/common/image_preview_type.dart';
-import 'package:PiliPlus/utils/extension.dart';
 import 'package:PiliPlus/utils/image_util.dart';
+import 'package:PiliPlus/utils/page_utils.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
@@ -35,9 +35,9 @@ Widget htmlRender({
           }
 
           String? clazz = attributes['class'];
-          String? height = RegExp(r'max-height:(\d+)px')
-              .firstMatch('${attributes['style']}')
-              ?.group(1);
+          String? height = RegExp(
+            r'max-height:(\d+)px',
+          ).firstMatch('${attributes['style']}')?.group(1);
           if (clazz?.contains('cut-off') == true || height != null) {
             return CachedNetworkImage(
               width: maxWidth,
@@ -54,7 +54,7 @@ Widget htmlRender({
                 if (callback != null) {
                   callback([imgUrl], 0);
                 } else {
-                  context.imageView(
+                  PageUtils.imageView(
                     imgList: [SourceModel(url: imgUrl)],
                     quality: 60,
                   );

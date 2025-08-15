@@ -19,8 +19,13 @@ class SearchUserPanel extends CommonSearchPanel {
   State<SearchUserPanel> createState() => _SearchUserPanelState();
 }
 
-class _SearchUserPanelState extends CommonSearchPanelState<SearchUserPanel,
-    SearchUserData, SearchUserItemModel> {
+class _SearchUserPanelState
+    extends
+        CommonSearchPanelState<
+          SearchUserPanel,
+          SearchUserData,
+          SearchUserItemModel
+        > {
   @override
   late final SearchUserController controller = Get.put(
     SearchUserController(
@@ -46,7 +51,7 @@ class _SearchUserPanelState extends CommonSearchPanelState<SearchUserPanel,
             children: [
               Obx(
                 () => Text(
-                  '排序: ${controller.orderFiltersList[controller.currentOrderFilterval.value]['label']}',
+                  '排序: ${controller.userOrderType!.value.label}',
                   maxLines: 1,
                   style: TextStyle(color: theme.colorScheme.outline),
                 ),
@@ -54,7 +59,7 @@ class _SearchUserPanelState extends CommonSearchPanelState<SearchUserPanel,
               const Spacer(),
               Obx(
                 () => Text(
-                  '用户类型: ${controller.userTypeFiltersList[controller.currentUserTypeFilterval.value]['label']}',
+                  '用户类型: ${controller.userType!.value.label}',
                   maxLines: 1,
                   style: TextStyle(color: theme.colorScheme.outline),
                 ),

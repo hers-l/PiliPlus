@@ -14,10 +14,8 @@ import 'package:PiliPlus/models/search/result.dart';
 import 'package:PiliPlus/utils/date_util.dart';
 import 'package:PiliPlus/utils/duration_util.dart';
 import 'package:PiliPlus/utils/page_utils.dart';
-import 'package:PiliPlus/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
-import 'package:get/get.dart';
 
 // 视频卡片 - 水平布局
 class VideoCardH extends StatelessWidget {
@@ -43,6 +41,11 @@ class VideoCardH extends StatelessWidget {
       var typeOrNull = item.type;
       if (typeOrNull?.isNotEmpty == true) {
         type = typeOrNull!;
+        if (type == 'ketang') {
+          badge = '课堂';
+        } else if (type == 'live_room') {
+          badge = '直播';
+        }
       }
       if (item.isUnionVideo == 1) {
         badge = '合作';
@@ -60,26 +63,29 @@ class VideoCardH extends StatelessWidget {
         clipBehavior: Clip.none,
         children: [
           InkWell(
-            onLongPress: onLongPress ??
+            onLongPress:
+                onLongPress ??
                 () => imageSaveDialog(
-                      bvid: videoItem.bvid,
-                      title: videoItem.title,
-                      cover: videoItem.cover,
-                    ),
-            onTap: onTap ??
+                  bvid: videoItem.bvid,
+                  title: videoItem.title,
+                  cover: videoItem.cover,
+                ),
+            onTap:
+                onTap ??
                 () async {
                   if (type == 'ketang') {
-                    SmartDialog.showToast('课堂视频暂不支持播放');
+                    PageUtils.viewPugv(seasonId: videoItem.aid);
                     return;
                   } else if (type == 'live_room') {
                     if (videoItem case SearchVideoItemModel item) {
                       int? roomId = item.id;
                       if (roomId != null) {
-                        Get.toNamed('/liveRoom?roomid=$roomId');
+                        PageUtils.toLiveRoom(roomId);
                       }
                     } else {
                       SmartDialog.showToast(
-                          'err: live_room : ${videoItem.runtimeType}');
+                        'err: live_room : ${videoItem.runtimeType}',
+                      );
                     }
                     return;
                   }
@@ -89,17 +95,20 @@ class VideoCardH extends StatelessWidget {
                       return;
                     }
                   }
+
                   try {
-                    final int? cid = videoItem.cid ??
+                    final int? cid =
+                        videoItem.cid ??
                         await SearchHttp.ab2c(
-                            aid: videoItem.aid, bvid: videoItem.bvid);
+                          aid: videoItem.aid,
+                          bvid: videoItem.bvid,
+                        );
                     if (cid != null) {
                       PageUtils.toVideoPage(
-                        'bvid=${videoItem.bvid}&cid=$cid',
-                        arguments: {
-                          'videoItem': videoItem,
-                          'heroTag': Utils.makeHeroTag(videoItem.aid)
-                        },
+                        bvid: videoItem.bvid,
+                        cid: cid,
+                        cover: videoItem.cover,
+                        title: videoItem.title,
                       );
                     }
                   } catch (err) {
@@ -157,21 +166,15 @@ class VideoCardH extends StatelessWidget {
                                       ? 1
                                       : progress / videoItem.duration,
                                 ),
-                              )
+                              ),
                             ] else if (videoItem.duration > 0)
                               PBadge(
                                 text: DurationUtil.formatDuration(
-                                    videoItem.duration),
+                                  videoItem.duration,
+                                ),
                                 right: 6.0,
                                 bottom: 6.0,
                                 type: PBadgeType.gray,
-                              ),
-                            if (type != 'video')
-                              PBadge(
-                                text: type,
-                                left: 6.0,
-                                bottom: 6.0,
-                                type: PBadgeType.primary,
                               ),
                           ],
                         );
@@ -214,22 +217,24 @@ class VideoCardH extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   maxLines: 2,
                   TextSpan(
-                      children: item.titleList!
-                          .map((e) => TextSpan(
-                                text: e.text,
-                                style: TextStyle(
-                                  fontSize:
-                                      theme.textTheme.bodyMedium!.fontSize,
-                                  height: 1.42,
-                                  letterSpacing: 0.3,
-                                  color: e.isEm
-                                      ? theme.colorScheme.primary
-                                      : theme.colorScheme.onSurface,
-                                ),
-                              ))
-                          .toList()),
+                    children: item.titleList!
+                        .map(
+                          (e) => TextSpan(
+                            text: e.text,
+                            style: TextStyle(
+                              fontSize: theme.textTheme.bodyMedium!.fontSize,
+                              height: 1.42,
+                              letterSpacing: 0.3,
+                              color: e.isEm
+                                  ? theme.colorScheme.primary
+                                  : theme.colorScheme.onSurface,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
                 ),
-              )
+              ),
           ] else
             Expanded(
               child: Text(

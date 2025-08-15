@@ -50,8 +50,10 @@ class _ColorSelectPageState extends State<ColorSelectPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     TextStyle titleStyle = theme.textTheme.titleMedium!;
-    TextStyle subTitleStyle =
-        theme.textTheme.labelMedium!.copyWith(color: theme.colorScheme.outline);
+    TextStyle subTitleStyle = theme.textTheme.labelMedium!.copyWith(
+      color: theme.colorScheme.outline,
+    );
+    final size = Get.size;
     return Scaffold(
       appBar: AppBar(title: const Text('选择应用主题')),
       body: SafeArea(
@@ -64,10 +66,10 @@ class _ColorSelectPageState extends State<ColorSelectPage> {
                   context: context,
                   builder: (context) {
                     return SelectDialog<ThemeType>(
-                        title: '主题模式',
-                        value: ctr.themeType.value,
-                        values:
-                            ThemeType.values.map((e) => (e, e.desc)).toList());
+                      title: '主题模式',
+                      value: ctr.themeType.value,
+                      values: ThemeType.values.map((e) => (e, e.desc)).toList(),
+                    );
                   },
                 );
                 if (result != null) {
@@ -85,8 +87,12 @@ class _ColorSelectPageState extends State<ColorSelectPage> {
                 child: const Icon(Icons.flashlight_on_outlined),
               ),
               title: Text('主题模式', style: titleStyle),
-              subtitle: Obx(() => Text('当前模式：${ctr.themeType.value.desc}',
-                  style: subTitleStyle)),
+              subtitle: Obx(
+                () => Text(
+                  '当前模式：${ctr.themeType.value.desc}',
+                  style: subTitleStyle,
+                ),
+              ),
             ),
             Obx(
               () => ListTile(
@@ -100,15 +106,19 @@ class _ColorSelectPageState extends State<ColorSelectPage> {
                       initialValue: _dynamicSchemeVariant,
                       onSelected: (item) {
                         _dynamicSchemeVariant = item;
-                        GStorage.setting
-                            .put(SettingBoxKey.schemeVariant, item.index);
+                        GStorage.setting.put(
+                          SettingBoxKey.schemeVariant,
+                          item.index,
+                        );
                         Get.forceAppUpdate();
                       },
                       itemBuilder: (context) => FlexSchemeVariant.values
-                          .map((item) => PopupMenuItem<FlexSchemeVariant>(
-                                value: item,
-                                child: Text(item.variantName),
-                              ))
+                          .map(
+                            (item) => PopupMenuItem<FlexSchemeVariant>(
+                              value: item,
+                              child: Text(item.variantName),
+                            ),
+                          )
                           .toList(),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -119,8 +129,9 @@ class _ColorSelectPageState extends State<ColorSelectPage> {
                               height: 1,
                               fontSize: 13,
                               color: ctr.type.value == 0
-                                  ? theme.colorScheme.outline
-                                      .withValues(alpha: 0.8)
+                                  ? theme.colorScheme.outline.withValues(
+                                      alpha: 0.8,
+                                    )
                                   : theme.colorScheme.secondary,
                             ),
                             strutStyle: const StrutStyle(leading: 0, height: 1),
@@ -129,10 +140,11 @@ class _ColorSelectPageState extends State<ColorSelectPage> {
                             size: 20,
                             Icons.keyboard_arrow_right,
                             color: ctr.type.value == 0
-                                ? theme.colorScheme.outline
-                                    .withValues(alpha: 0.8)
+                                ? theme.colorScheme.outline.withValues(
+                                    alpha: 0.8,
+                                  )
                                 : theme.colorScheme.secondary,
-                          )
+                          ),
                         ],
                       ),
                     ),
@@ -229,8 +241,8 @@ class _ColorSelectPageState extends State<ColorSelectPage> {
             ...[
               IgnorePointer(
                 child: Container(
-                  height: Get.height / 2,
-                  width: Get.width,
+                  height: size.height / 2,
+                  width: size.width,
                   color: theme.colorScheme.surface,
                   child: const HomePage(),
                 ),

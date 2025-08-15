@@ -1,6 +1,7 @@
 import 'package:PiliPlus/models_new/live/live_room_info_h5/data.dart';
-import 'package:PiliPlus/models_new/pgc/pgc_info_model/result.dart';
+import 'package:PiliPlus/models_new/pgc/pgc_info_model/episode.dart';
 import 'package:PiliPlus/models_new/video/video_detail/data.dart';
+import 'package:PiliPlus/models_new/video/video_detail/page.dart';
 import 'package:PiliPlus/plugin/pl_player/controller.dart';
 import 'package:PiliPlus/plugin/pl_player/models/play_status.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
@@ -41,10 +42,12 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> seek(Duration position) async {
-    playbackState.add(playbackState.value.copyWith(
-      updatePosition: position,
-    ));
-    await PlPlayerController.seekToIfExists(position, type: 'slider');
+    playbackState.add(
+      playbackState.value.copyWith(
+        updatePosition: position,
+      ),
+    );
+    await PlPlayerController.seekToIfExists(position, isSeek: false);
     // await player.seekTo(position);
   }
 
@@ -60,7 +63,10 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
   }
 
   Future<void> setPlaybackState(
-      PlayerStatus status, bool isBuffering, bool isLive) async {
+    PlayerStatus status,
+    bool isBuffering,
+    bool isLive,
+  ) async {
     if (!enableBackgroundPlay ||
         _item.isEmpty ||
         !PlPlayerController.instanceExists()) {
@@ -77,23 +83,28 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
       processingState = AudioProcessingState.ready;
     }
 
-    playbackState.add(playbackState.value.copyWith(
-      processingState:
-          isBuffering ? AudioProcessingState.buffering : processingState,
-      controls: [
-        if (!isLive)
-          MediaControl.rewind
-              .copyWith(androidIcon: 'drawable/ic_baseline_replay_10_24'),
-        if (playing) MediaControl.pause else MediaControl.play,
-        if (!isLive)
-          MediaControl.fastForward
-              .copyWith(androidIcon: 'drawable/ic_baseline_forward_10_24'),
-      ],
-      playing: playing,
-      systemActions: const {
-        MediaAction.seek,
-      },
-    ));
+    playbackState.add(
+      playbackState.value.copyWith(
+        processingState: isBuffering
+            ? AudioProcessingState.buffering
+            : processingState,
+        controls: [
+          if (!isLive)
+            MediaControl.rewind.copyWith(
+              androidIcon: 'drawable/ic_baseline_replay_10_24',
+            ),
+          if (playing) MediaControl.pause else MediaControl.play,
+          if (!isLive)
+            MediaControl.fastForward.copyWith(
+              androidIcon: 'drawable/ic_baseline_forward_10_24',
+            ),
+        ],
+        playing: playing,
+        systemActions: const {
+          MediaAction.seek,
+        },
+      ),
+    );
   }
 
   void onStatusChange(PlayerStatus status, bool isBuffering, isLive) {
@@ -103,7 +114,13 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
     setPlaybackState(status, isBuffering, isLive);
   }
 
-  void onVideoDetailChange(dynamic data, int cid, String herotag) {
+  void onVideoDetailChange(
+    dynamic data,
+    int cid,
+    String herotag, {
+    String? artist,
+    String? cover,
+  }) {
     if (!enableBackgroundPlay) return;
     // if (kDebugMode) {
     //   debugPrint('当前调用栈为：');
@@ -116,42 +133,50 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
     MediaItem? mediaItem;
     if (data is VideoDetailData) {
       if ((data.pages?.length ?? 0) > 1) {
-        final current =
-            data.pages?.firstWhereOrNull((element) => element.cid == cid);
+        final current = data.pages?.firstWhereOrNull(
+          (element) => element.cid == cid,
+        );
         mediaItem = MediaItem(
           id: id,
-          title: current?.pagePart ?? "",
-          artist: data.title ?? "",
-          album: data.title ?? "",
+          title: current?.pagePart ?? '',
+          artist: data.owner?.name,
           duration: Duration(seconds: current?.duration ?? 0),
-          artUri: Uri.parse(data.pic ?? ""),
+          artUri: Uri.parse(data.pic ?? ''),
         );
       } else {
         mediaItem = MediaItem(
           id: id,
-          title: data.title ?? "",
-          artist: data.owner?.name ?? "",
+          title: data.title ?? '',
+          artist: data.owner?.name,
           duration: Duration(seconds: data.duration ?? 0),
-          artUri: Uri.parse(data.pic ?? ""),
+          artUri: Uri.parse(data.pic ?? ''),
         );
       }
-    } else if (data is PgcInfoModel) {
-      final current =
-          data.episodes?.firstWhereOrNull((element) => element.cid == cid);
+    } else if (data is EpisodeItem) {
       mediaItem = MediaItem(
         id: id,
-        title: current?.longTitle ?? "",
-        artist: data.title ?? "",
-        duration: Duration(milliseconds: current?.duration ?? 0),
-        artUri: Uri.parse(data.cover ?? ""),
+        title: data.showTitle ?? data.longTitle ?? data.title ?? '',
+        artist: artist,
+        duration: data.from == 'pugv'
+            ? Duration(seconds: data.duration ?? 0)
+            : Duration(milliseconds: data.duration ?? 0),
+        artUri: Uri.parse(data.cover ?? ''),
       );
     } else if (data is RoomInfoH5Data) {
       mediaItem = MediaItem(
         id: id,
         title: data.roomInfo?.title ?? '',
-        artist: data.anchorInfo?.baseInfo?.uname ?? '',
+        artist: data.anchorInfo?.baseInfo?.uname,
         artUri: Uri.parse(data.roomInfo?.cover ?? ''),
         isLive: true,
+      );
+    } else if (data is Part) {
+      mediaItem = MediaItem(
+        id: id,
+        title: data.pagePart ?? '',
+        artist: artist,
+        duration: Duration(seconds: data.duration ?? 0),
+        artUri: Uri.parse(cover ?? ''),
       );
     }
     if (mediaItem == null) return;
@@ -168,10 +193,12 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
       _item.removeWhere((item) => item.id.endsWith(herotag));
     }
     if (_item.isNotEmpty) {
-      playbackState.add(playbackState.value.copyWith(
-        processingState: AudioProcessingState.idle,
-        playing: false,
-      ));
+      playbackState.add(
+        playbackState.value.copyWith(
+          processingState: AudioProcessingState.idle,
+          playing: false,
+        ),
+      );
       setMediaItem(_item.last);
       stop();
     }
@@ -188,15 +215,19 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
         }
      */
     if (playbackState.value.processingState == AudioProcessingState.idle) {
-      playbackState.add(PlaybackState(
-        processingState: AudioProcessingState.completed,
-        playing: false,
-      ));
+      playbackState.add(
+        PlaybackState(
+          processingState: AudioProcessingState.completed,
+          playing: false,
+        ),
+      );
     }
-    playbackState.add(PlaybackState(
-      processingState: AudioProcessingState.idle,
-      playing: false,
-    ));
+    playbackState.add(
+      PlaybackState(
+        processingState: AudioProcessingState.idle,
+        playing: false,
+      ),
+    );
   }
 
   void onPositionChange(Duration position) {
@@ -206,8 +237,10 @@ class VideoPlayerServiceHandler extends BaseAudioHandler with SeekHandler {
       return;
     }
 
-    playbackState.add(playbackState.value.copyWith(
-      updatePosition: position,
-    ));
+    playbackState.add(
+      playbackState.value.copyWith(
+        updatePosition: position,
+      ),
+    );
   }
 }

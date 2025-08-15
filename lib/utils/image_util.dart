@@ -4,11 +4,9 @@ import 'package:PiliPlus/http/init.dart';
 import 'package:PiliPlus/utils/extension.dart';
 import 'package:PiliPlus/utils/global_data.dart';
 import 'package:PiliPlus/utils/utils.dart';
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
-import 'package:get/get.dart';
 import 'package:intl/intl.dart' show DateFormat;
 import 'package:live_photo_maker/live_photo_maker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -24,24 +22,18 @@ class ImageUtil {
   static Future<void> onShareImg(String url) async {
     try {
       SmartDialog.showLoading();
-      var response = await Request()
-          .get(url, options: Options(responseType: ResponseType.bytes));
       final temp = await getTemporaryDirectory();
+      var path = '${temp.path}/${Utils.getFileName(url)}';
+      var res = await Request().downloadFile(url.http2https, path);
       SmartDialog.dismiss();
-      var name = Utils.getFileName(url);
-      var path = '${temp.path}/$name';
-      File(path).writeAsBytesSync(response.data);
-
-      Rect? sharePositionOrigin;
-      if (await Utils.isIpad()) {
-        sharePositionOrigin = Rect.fromLTWH(0, 0, Get.width, Get.height / 2);
+      if (res.statusCode == 200) {
+        SharePlus.instance.share(
+          ShareParams(
+            files: [XFile(path)],
+            sharePositionOrigin: await Utils.sharePositionOrigin,
+          ),
+        );
       }
-
-      Share.shareXFiles(
-        [XFile(path)],
-        subject: url,
-        sharePositionOrigin: sharePositionOrigin,
-      );
     } catch (e) {
       SmartDialog.showToast(e.toString());
     }
@@ -64,7 +56,7 @@ class ImageUtil {
               TextButton(
                 onPressed: openAppSettings,
                 child: Text('去授权'),
-              )
+              ),
             ],
           );
         },
@@ -88,10 +80,10 @@ class ImageUtil {
   }
 
   static Future<bool> checkPermissionDependOnSdkInt(
-      BuildContext context) async {
+    BuildContext context,
+  ) async {
     if (Platform.isAndroid) {
-      final androidInfo = await DeviceInfoPlugin().androidInfo;
-      if (androidInfo.version.sdkInt <= 32) {
+      if (await Utils.sdkInt <= 32) {
         if (!context.mounted) return false;
         return requestStoragePer(context);
       } else {
@@ -120,10 +112,12 @@ class ImageUtil {
       String videoName = "video_${Utils.getFileName(liveUrl)}";
       String videoPath = '$tmpPath/$videoName';
 
-      await Request.dio.download(liveUrl, videoPath);
+      final res = await Request().downloadFile(liveUrl.http2https, videoPath);
+      if (res.statusCode != 200) throw '${res.statusCode}';
 
       if (Platform.isIOS) {
-        await Request.dio.download(url, imagePath);
+        final res1 = await Request().downloadFile(url.http2https, imagePath);
+        if (res1.statusCode != 200) throw '${res1.statusCode}';
         SmartDialog.showLoading(msg: '正在保存');
         bool success = await LivePhotoMaker.create(
           coverImage: imagePath,
@@ -163,7 +157,9 @@ class ImageUtil {
   }
 
   static Future<bool> downloadImg(
-      BuildContext context, List<String> imgList) async {
+    BuildContext context,
+    List<String> imgList,
+  ) async {
     if (!await checkPermissionDependOnSdkInt(context)) return false;
     final cancelToken = CancelToken();
     SmartDialog.showLoading(
@@ -232,8 +228,10 @@ class ImageUtil {
     }
   }
 
-  static final _thumbRegex =
-      RegExp(r'(@(\d+[a-z]_?)*)(\..*)?$', caseSensitive: false);
+  static final _thumbRegex = RegExp(
+    r'(@(\d+[a-z]_?)*)(\..*)?$',
+    caseSensitive: false,
+  );
   static String thumbnailUrl(String? src, [int? quality]) {
     if (src != null && quality != 100) {
       bool hasMatch = false;

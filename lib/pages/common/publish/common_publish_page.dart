@@ -5,12 +5,13 @@ import 'dart:math' show max;
 import 'package:PiliPlus/http/msg.dart';
 import 'package:PiliPlus/models/common/publish_panel_type.dart';
 import 'package:PiliPlus/models_new/upload_bfs/data.dart';
+import 'package:PiliPlus/utils/context_ext.dart';
 import 'package:PiliPlus/utils/feed_back.dart';
 import 'package:chat_bottom_container/chat_bottom_container.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
-import 'package:get/get.dart';
+import 'package:get/get.dart' hide ContextExtensionss;
 import 'package:image_picker/image_picker.dart';
 
 abstract class CommonPublishPage<T> extends StatefulWidget {
@@ -29,7 +30,8 @@ abstract class CommonPublishPage<T> extends StatefulWidget {
 }
 
 abstract class CommonPublishPageState<T extends CommonPublishPage>
-    extends State<T> with WidgetsBindingObserver {
+    extends State<T>
+    with WidgetsBindingObserver {
   late final focusNode = FocusNode();
   late final controller = ChatBottomPanelContainerController<PanelType>();
   TextEditingController get editController;
@@ -55,7 +57,7 @@ abstract class CommonPublishPageState<T extends CommonPublishPage>
     initPubState();
 
     if (widget.autofocus) {
-      Future.delayed(const Duration(milliseconds: 300)).whenComplete(() {
+      Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted) {
           focusNode.requestFocus();
         }
@@ -76,9 +78,8 @@ abstract class CommonPublishPageState<T extends CommonPublishPage>
     super.dispose();
   }
 
-  Future<void> _requestFocus() async {
-    await Future.delayed(const Duration(microseconds: 200));
-    focusNode.requestFocus();
+  void _requestFocus() {
+    Future.delayed(const Duration(microseconds: 200), focusNode.requestFocus);
   }
 
   @override
@@ -218,23 +219,24 @@ abstract class CommonPublishPageState<T extends CommonPublishPage>
       final cancelToken = CancelToken();
       try {
         pictures = await Future.wait<Map<String, dynamic>>(
-            pathList.map((path) async {
-              Map result = await MsgHttp.uploadBfs(
-                path: path,
-                category: 'daily',
-                biz: 'new_dyn',
-                cancelToken: cancelToken,
-              );
-              if (!result['status']) throw HttpException(result['msg']);
-              UploadBfsResData data = result['data'];
-              return {
-                'img_width': data.imageWidth,
-                'img_height': data.imageHeight,
-                'img_size': data.imgSize,
-                'img_src': data.imageUrl,
-              };
-            }).toList(),
-            eagerError: true);
+          pathList.map((path) async {
+            Map result = await MsgHttp.uploadBfs(
+              path: path,
+              category: 'daily',
+              biz: 'new_dyn',
+              cancelToken: cancelToken,
+            );
+            if (!result['status']) throw HttpException(result['msg']);
+            UploadBfsResData data = result['data'];
+            return {
+              'img_width': data.imageWidth,
+              'img_height': data.imageHeight,
+              'img_size': data.imgSize,
+              'img_src': data.imageUrl,
+            };
+          }),
+          eagerError: true,
+        );
         SmartDialog.dismiss();
       } on HttpException catch (e) {
         cancelToken.cancel();
@@ -254,5 +256,5 @@ abstract class CommonPublishPageState<T extends CommonPublishPage>
     enablePublish.value = value.trim().isNotEmpty;
   }
 
-  void onSave() {}
+  void onSave();
 }

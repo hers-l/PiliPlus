@@ -4,30 +4,30 @@ class AppBarAni extends StatelessWidget {
   const AppBarAni({
     required this.child,
     required this.controller,
-    required this.visible,
-    this.position,
+    required this.isTop,
     super.key,
   });
 
   final Widget child;
   final AnimationController controller;
-  final bool visible;
-  final String? position;
+  final bool isTop;
 
   @override
   Widget build(BuildContext context) {
-    visible ? controller.forward() : controller.reverse();
     return SlideTransition(
-      position: Tween<Offset>(
-        begin: Offset(0, position! == 'top' ? -1 : 1.1),
-        end: Offset.zero,
-      ).animate(CurvedAnimation(
-        parent: controller,
-        curve: Curves.linear,
-      )),
+      position:
+          Tween<Offset>(
+            begin: isTop ? const Offset(0, -1) : const Offset(0, 1.1),
+            end: Offset.zero,
+          ).animate(
+            CurvedAnimation(
+              parent: controller,
+              curve: Curves.linear,
+            ),
+          ),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          gradient: position! == 'top'
+          gradient: isTop
               ? const LinearGradient(
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,

@@ -1,4 +1,3 @@
-import 'package:PiliPlus/common/constants.dart';
 import 'package:PiliPlus/common/skeleton/video_card_h.dart';
 import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
 import 'package:PiliPlus/common/widgets/refresh_indicator.dart';
@@ -43,7 +42,10 @@ class _HotPageState extends CommonPageState<HotPage, HotController>
         mainAxisSize: MainAxisSize.min,
         children: [
           CachedNetworkImage(
-              width: 35, height: 35, imageUrl: ImageUtil.thumbnailUrl(iconUrl)),
+            width: 35,
+            height: 35,
+            imageUrl: ImageUtil.thumbnailUrl(iconUrl),
+          ),
           const SizedBox(height: 4),
           Text(
             title,
@@ -67,8 +69,11 @@ class _HotPageState extends CommonPageState<HotPage, HotController>
             child: Obx(
               () => controller.showHotRcmd.value
                   ? Padding(
-                      padding:
-                          const EdgeInsets.only(left: 12, top: 12, right: 12),
+                      padding: const EdgeInsets.only(
+                        left: 12,
+                        top: 12,
+                        right: 12,
+                      ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
@@ -80,8 +85,9 @@ class _HotPageState extends CommonPageState<HotPage, HotController>
                               try {
                                 HomeController homeController =
                                     Get.find<HomeController>();
-                                int index = homeController.tabs
-                                    .indexOf(HomeTabType.rank);
+                                int index = homeController.tabs.indexOf(
+                                  HomeTabType.rank,
+                                );
                                 if (index != -1) {
                                   homeController.tabController.animateTo(index);
                                 } else {
@@ -107,7 +113,7 @@ class _HotPageState extends CommonPageState<HotPage, HotController>
                               '/webview',
                               parameters: {
                                 'url':
-                                    'https://www.bilibili.com/h5/weekly-recommend'
+                                    'https://www.bilibili.com/h5/weekly-recommend',
                               },
                             ),
                           ),
@@ -119,7 +125,7 @@ class _HotPageState extends CommonPageState<HotPage, HotController>
                               '/webview',
                               parameters: {
                                 'url':
-                                    'https://www.bilibili.com/h5/good-history'
+                                    'https://www.bilibili.com/h5/good-history',
                               },
                             ),
                           ),
@@ -131,7 +137,7 @@ class _HotPageState extends CommonPageState<HotPage, HotController>
           ),
           SliverPadding(
             padding: EdgeInsets.only(
-              top: StyleString.safeSpace - 5,
+              top: 7,
               bottom: MediaQuery.paddingOf(context).bottom + 80,
             ),
             sliver: Obx(
@@ -158,31 +164,32 @@ class _HotPageState extends CommonPageState<HotPage, HotController>
   Widget _buildBody(LoadingState<List<HotVideoItemModel>?> loadingState) {
     return switch (loadingState) {
       Loading() => _buildSkeleton(),
-      Success(:var response) => response?.isNotEmpty == true
-          ? SliverGrid(
-              gridDelegate: Grid.videoCardHDelegate(context),
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  if (index == response.length - 1) {
-                    controller.onLoadMore();
-                  }
-                  return VideoCardH(
-                    videoItem: response[index],
-                    onRemove: () => controller.loadingState
-                      ..value.data!.removeAt(index)
-                      ..refresh(),
-                  );
-                },
-                childCount: response!.length,
+      Success(:var response) =>
+        response?.isNotEmpty == true
+            ? SliverGrid(
+                gridDelegate: Grid.videoCardHDelegate(context),
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    if (index == response.length - 1) {
+                      controller.onLoadMore();
+                    }
+                    return VideoCardH(
+                      videoItem: response[index],
+                      onRemove: () => controller.loadingState
+                        ..value.data!.removeAt(index)
+                        ..refresh(),
+                    );
+                  },
+                  childCount: response!.length,
+                ),
+              )
+            : HttpError(
+                onReload: controller.onReload,
               ),
-            )
-          : HttpError(
-              onReload: controller.onReload,
-            ),
       Error(:var errMsg) => HttpError(
-          errMsg: errMsg,
-          onReload: controller.onReload,
-        ),
+        errMsg: errMsg,
+        onReload: controller.onReload,
+      ),
     };
   }
 }

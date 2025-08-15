@@ -1,12 +1,12 @@
 import 'package:PiliPlus/common/widgets/scroll_physics.dart';
+import 'package:PiliPlus/http/loading_state.dart';
 import 'package:PiliPlus/models/common/dynamic/dynamics_type.dart';
 import 'package:PiliPlus/models/common/dynamic/up_panel_position.dart';
+import 'package:PiliPlus/models/dynamics/up.dart';
 import 'package:PiliPlus/pages/dynamics/controller.dart';
 import 'package:PiliPlus/pages/dynamics/widgets/up_panel.dart';
 import 'package:PiliPlus/pages/dynamics_create/view.dart';
 import 'package:PiliPlus/pages/dynamics_tab/view.dart';
-import 'package:PiliPlus/utils/storage_pref.dart';
-import 'package:easy_debounce/easy_throttle.dart';
 import 'package:flutter/material.dart' hide DraggableScrollableSheet;
 import 'package:get/get.dart';
 
@@ -26,55 +26,31 @@ class _DynamicsPageState extends State<DynamicsPage>
   bool get wantKeepAlive => true;
 
   Widget _createDynamicBtn(ThemeData theme, [bool isRight = true]) => Center(
-        child: Container(
-          width: 34,
-          height: 34,
-          margin:
-              EdgeInsets.only(left: !isRight ? 16 : 0, right: isRight ? 16 : 0),
-          child: IconButton(
-            tooltip: '发布动态',
-            style: ButtonStyle(
-              padding: WidgetStateProperty.all(EdgeInsets.zero),
-              backgroundColor: WidgetStateProperty.resolveWith((states) {
-                return theme.colorScheme.secondaryContainer;
-              }),
-            ),
-            onPressed: () {
-              if (_dynamicsController.accountService.isLogin.value) {
-                CreateDynPanel.onCreateDyn(context);
-              }
-            },
-            icon: Icon(
-              Icons.add,
-              size: 18,
-              color: theme.colorScheme.onSecondaryContainer,
-            ),
+    child: Container(
+      width: 34,
+      height: 34,
+      margin: EdgeInsets.only(left: !isRight ? 16 : 0, right: isRight ? 16 : 0),
+      child: IconButton(
+        tooltip: '发布动态',
+        style: ButtonStyle(
+          padding: WidgetStateProperty.all(EdgeInsets.zero),
+          backgroundColor: WidgetStatePropertyAll(
+            theme.colorScheme.secondaryContainer,
           ),
         ),
-      );
-
-  @override
-  void initState() {
-    super.initState();
-    if (Pref.dynamicsShowAllFollowedUp) {
-      _dynamicsController.scrollController.addListener(listener);
-    }
-  }
-
-  void listener() {
-    if (_dynamicsController.scrollController.position.pixels >=
-        _dynamicsController.scrollController.position.maxScrollExtent - 300) {
-      EasyThrottle.throttle('following', const Duration(seconds: 1), () {
-        _dynamicsController.queryFollowing2();
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _dynamicsController.scrollController.removeListener(listener);
-    super.dispose();
-  }
+        onPressed: () {
+          if (_dynamicsController.accountService.isLogin.value) {
+            CreateDynPanel.onCreateDyn(context);
+          }
+        },
+        icon: Icon(
+          Icons.add,
+          size: 18,
+          color: theme.colorScheme.onSecondaryContainer,
+        ),
+      ),
+    ),
+  );
 
   Widget upPanelPart(ThemeData theme) {
     bool isTop = upPanelPosition == UpPanelPosition.top;
@@ -85,25 +61,28 @@ class _DynamicsPageState extends State<DynamicsPage>
       child: SizedBox(
         width: isTop ? null : 64,
         height: isTop ? 76 : null,
-        child: Obx(
-          () {
-            if (_dynamicsController.upData.value.upList == null &&
-                _dynamicsController.upData.value.liveUsers == null) {
-              return const SizedBox.shrink();
-            } else if (_dynamicsController.upData.value.errMsg != null) {
-              return Center(
-                child: IconButton(
-                  icon: const Icon(Icons.refresh),
-                  onPressed: _dynamicsController.queryFollowUp,
-                ),
-              );
-            } else {
-              return UpPanel(dynamicsController: _dynamicsController);
-            }
+        child: Obx(() => _buildUpPanel(_dynamicsController.upState.value)),
+      ),
+    );
+  }
+
+  Widget _buildUpPanel(LoadingState<FollowUpModel> upState) {
+    return switch (upState) {
+      Loading() => const SizedBox.shrink(),
+      Success<FollowUpModel>() => UpPanel(
+        dynamicsController: _dynamicsController,
+      ),
+      Error() => Center(
+        child: IconButton(
+          icon: const Icon(Icons.refresh),
+          onPressed: () {
+            _dynamicsController
+              ..upState.value = LoadingState<FollowUpModel>.loading()
+              ..queryFollowUp();
           },
         ),
       ),
-    );
+    };
   }
 
   @override
@@ -132,9 +111,10 @@ class _DynamicsPageState extends State<DynamicsPage>
             unselectedLabelColor: theme.colorScheme.onSurface,
             labelStyle:
                 TabBarTheme.of(context).labelStyle?.copyWith(fontSize: 13) ??
-                    const TextStyle(fontSize: 13),
-            tabs:
-                DynamicsTabType.values.map((e) => Tab(text: e.label)).toList(),
+                const TextStyle(fontSize: 13),
+            tabs: DynamicsTabType.values
+                .map((e) => Tab(text: e.label))
+                .toList(),
             onTap: (index) {
               if (!_dynamicsController.tabController.indexIsChanging) {
                 _dynamicsController.animateToTop();

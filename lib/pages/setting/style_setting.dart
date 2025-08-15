@@ -1,4 +1,3 @@
-import 'package:PiliPlus/pages/setting/models/model.dart';
 import 'package:PiliPlus/pages/setting/models/style_settings.dart';
 import 'package:flutter/material.dart';
 
@@ -17,8 +16,9 @@ class _StyleSettingState extends State<StyleSetting> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar:
-          widget.showAppBar == false ? null : AppBar(title: const Text('外观设置')),
+      appBar: widget.showAppBar == false
+          ? null
+          : AppBar(title: const Text('外观设置')),
       body: ListView(
         padding: EdgeInsets.only(
           bottom: MediaQuery.paddingOf(context).bottom + 80,

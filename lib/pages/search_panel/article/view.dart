@@ -19,8 +19,13 @@ class SearchArticlePanel extends CommonSearchPanel {
   State<SearchArticlePanel> createState() => _SearchArticlePanelState();
 }
 
-class _SearchArticlePanelState extends CommonSearchPanelState<
-    SearchArticlePanel, SearchArticleData, SearchArticleItemModel> {
+class _SearchArticlePanelState
+    extends
+        CommonSearchPanelState<
+          SearchArticlePanel,
+          SearchArticleData,
+          SearchArticleItemModel
+        > {
   @override
   late final SearchArticleController controller = Get.put(
     SearchArticleController(
@@ -46,7 +51,7 @@ class _SearchArticlePanelState extends CommonSearchPanelState<
             children: [
               Obx(
                 () => Text(
-                  '排序: ${controller.orderFiltersList[controller.currentOrderFilterval.value]['label']}',
+                  '排序: ${controller.articleOrderType.value.label}',
                   maxLines: 1,
                   style: TextStyle(color: theme.colorScheme.outline),
                 ),
@@ -54,7 +59,7 @@ class _SearchArticlePanelState extends CommonSearchPanelState<
               const Spacer(),
               Obx(
                 () => Text(
-                  '分区: ${controller.zoneFiltersList[controller.currentZoneFilterval.value]['label']}',
+                  '分区: ${controller.articleZoneType!.value.label}',
                   maxLines: 1,
                   style: TextStyle(color: theme.colorScheme.outline),
                 ),

@@ -2,8 +2,8 @@ import 'package:PiliPlus/common/constants.dart';
 import 'package:PiliPlus/common/widgets/image/image_save.dart';
 import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
 import 'package:PiliPlus/models/search/result.dart';
+import 'package:PiliPlus/utils/page_utils.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 
 class LiveItem extends StatelessWidget {
   final SearchLiveItemModel liveItem;
@@ -16,7 +16,7 @@ class LiveItem extends StatelessWidget {
     return Card(
       clipBehavior: Clip.hardEdge,
       child: InkWell(
-        onTap: () => Get.toNamed('/liveRoom?roomid=${liveItem.roomid}'),
+        onTap: () => PageUtils.toLiveRoom(liveItem.roomid),
         onLongPress: () => imageSaveDialog(
           title: liveItem.title.map((item) => item.text).join(),
           cover: liveItem.cover,
@@ -25,36 +25,38 @@ class LiveItem extends StatelessWidget {
           children: [
             AspectRatio(
               aspectRatio: StyleString.aspectRatio,
-              child: LayoutBuilder(builder: (context, boxConstraints) {
-                double maxWidth = boxConstraints.maxWidth;
-                double maxHeight = boxConstraints.maxHeight;
-                return Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    NetworkImgLayer(
-                      src: liveItem.cover,
-                      width: maxWidth,
-                      height: maxHeight,
-                      radius: 0,
-                    ),
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      child: AnimatedOpacity(
-                        opacity: 1,
-                        duration: const Duration(milliseconds: 200),
-                        child: liveStat(
-                          liveItem.online,
-                          liveItem.cateName,
+              child: LayoutBuilder(
+                builder: (context, boxConstraints) {
+                  double maxWidth = boxConstraints.maxWidth;
+                  double maxHeight = boxConstraints.maxHeight;
+                  return Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      NetworkImgLayer(
+                        src: liveItem.cover,
+                        width: maxWidth,
+                        height: maxHeight,
+                        radius: 0,
+                      ),
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: AnimatedOpacity(
+                          opacity: 1,
+                          duration: const Duration(milliseconds: 200),
+                          child: liveStat(
+                            liveItem.online,
+                            liveItem.cateName,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                );
-              }),
+                    ],
+                  );
+                },
+              ),
             ),
-            liveContent(theme)
+            liveContent(theme),
           ],
         ),
       ),
@@ -62,40 +64,43 @@ class LiveItem extends StatelessWidget {
   }
 
   Widget liveContent(ThemeData theme) => Expanded(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(9, 8, 9, 6),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text.rich(
-                TextSpan(
-                    children: liveItem.title
-                        .map((e) => TextSpan(
-                              text: e.text,
-                              style: TextStyle(
-                                color: e.isEm
-                                    ? theme.colorScheme.primary
-                                    : theme.colorScheme.onSurface,
-                              ),
-                            ))
-                        .toList()),
-              ),
-              SizedBox(
-                width: double.infinity,
-                child: Text(
-                  liveItem.uname!,
-                  maxLines: 1,
-                  style: TextStyle(
-                    fontSize: theme.textTheme.labelMedium!.fontSize,
-                    color: theme.colorScheme.outline,
-                  ),
-                ),
-              ),
-            ],
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(9, 8, 9, 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text.rich(
+            TextSpan(
+              children: liveItem.title
+                  .map(
+                    (e) => TextSpan(
+                      text: e.text,
+                      style: TextStyle(
+                        color: e.isEm
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurface,
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
           ),
-        ),
-      );
+          SizedBox(
+            width: double.infinity,
+            child: Text(
+              liveItem.uname!,
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: theme.textTheme.labelMedium!.fontSize,
+                color: theme.colorScheme.outline,
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 
   Widget liveStat(int? online, String? cateName) {
     return Container(
@@ -122,7 +127,7 @@ class LiveItem extends StatelessWidget {
           Text(
             '围观:${online.toString()}',
             style: const TextStyle(fontSize: 11, color: Colors.white),
-          )
+          ),
         ],
       ),
     );

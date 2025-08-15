@@ -23,6 +23,7 @@ class _WebDavSettingPageState extends State<WebDavSettingPage> {
   final _usernameCtr = TextEditingController(text: Pref.webdavUsername);
   final _passwordCtr = TextEditingController(text: Pref.webdavPassword);
   final _directoryCtr = TextEditingController(text: Pref.webdavDirectory);
+  bool _obscureText = true;
 
   @override
   void dispose() {
@@ -67,10 +68,17 @@ class _WebDavSettingPageState extends State<WebDavSettingPage> {
           TextField(
             controller: _passwordCtr,
             autofillHints: const [AutofillHints.password],
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: '密码',
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
+              suffixIcon: IconButton(
+                onPressed: () => setState(() => _obscureText = !_obscureText),
+                icon: _obscureText
+                    ? const Icon(Icons.visibility)
+                    : const Icon(Icons.visibility_off),
+              ),
             ),
+            obscureText: _obscureText,
           ),
           const SizedBox(height: 20),
           TextField(
@@ -113,15 +121,15 @@ class _WebDavSettingPageState extends State<WebDavSettingPage> {
       floatingActionButton: FloatingActionButton(
         child: const Icon(Icons.save),
         onPressed: () async {
+          await GStorage.setting.putAll({
+            SettingBoxKey.webdavUri: _uriCtr.text,
+            SettingBoxKey.webdavUsername: _usernameCtr.text,
+            SettingBoxKey.webdavPassword: _passwordCtr.text,
+            SettingBoxKey.webdavDirectory: _directoryCtr.text,
+          });
           if (_uriCtr.text.isEmpty) {
-            SmartDialog.showToast('地址不能为空');
             return;
           }
-          final setting = GStorage.setting;
-          await setting.put(SettingBoxKey.webdavUri, _uriCtr.text);
-          await setting.put(SettingBoxKey.webdavUsername, _usernameCtr.text);
-          await setting.put(SettingBoxKey.webdavPassword, _passwordCtr.text);
-          await setting.put(SettingBoxKey.webdavDirectory, _directoryCtr.text);
           try {
             final res = await WebDav().init();
             if (res.first) {

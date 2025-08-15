@@ -25,7 +25,6 @@ class MemberController extends CommonDataController<SpaceData, SpaceData?>
   MemberController({required this.mid});
   int mid;
   String? username;
-  RxBool showUname = false.obs;
 
   AccountService accountService = Get.find<AccountService>();
 
@@ -41,20 +40,12 @@ class MemberController extends CommonDataController<SpaceData, SpaceData?>
   late List<Tab> tabs;
   TabController? tabController;
   RxInt contributeInitialIndex = 0.obs;
-  late final implTabs = const [
-    'home',
-    'dynamic',
-    'contribute',
-    'favorite',
-    'bangumi',
-  ];
 
   bool? hasSeasonOrSeries;
 
   final fromViewAid = Get.parameters['from_view_aid'];
 
   final key = GlobalKey<ExtendedNestedScrollViewState>();
-  int offset = 120;
 
   @override
   void onInit() {
@@ -72,8 +63,8 @@ class MemberController extends CommonDataController<SpaceData, SpaceData?>
     } else {
       relation.value = data.card?.relation?.isFollow == 1
           ? data.relSpecial == 1
-              ? -10
-              : data.card?.relation?.status ?? 2
+                ? -10
+                : data.card?.relation?.status ?? 2
           : 0;
     }
     tab2 = data.tab2;
@@ -83,7 +74,7 @@ class MemberController extends CommonDataController<SpaceData, SpaceData?>
         data.series?.item?.isNotEmpty == true) {
       hasSeasonOrSeries = true;
     }
-    tab2?.retainWhere((item) => implTabs.contains(item.param));
+    tab2?.retainWhere((item) => MemberTabType.contains(item.param!));
     if (tab2?.isNotEmpty == true) {
       if (data.hasItem != true && tab2!.first.param == 'home') {
         // remove empty home tab
@@ -139,7 +130,6 @@ class MemberController extends CommonDataController<SpaceData, SpaceData?>
       vsync: this,
       length: tabs.length,
     );
-    showUname.value = true;
     username = errMsg;
     loadingState.value = const Success(null);
     return true;
@@ -147,9 +137,9 @@ class MemberController extends CommonDataController<SpaceData, SpaceData?>
 
   @override
   Future<LoadingState<SpaceData>> customGetData() => MemberHttp.space(
-        mid: mid,
-        fromViewAid: fromViewAid,
-      );
+    mid: mid,
+    fromViewAid: fromViewAid,
+  );
 
   void blockUser(BuildContext context) {
     if (!accountService.isLogin.value) {
@@ -176,7 +166,7 @@ class MemberController extends CommonDataController<SpaceData, SpaceData?>
                 _onBlock();
               },
               child: const Text('确认'),
-            )
+            ),
           ],
         );
       },
@@ -188,13 +178,14 @@ class MemberController extends CommonDataController<SpaceData, SpaceData?>
   }
 
   Future<void> _onBlock() async {
+    final isBlocked = relation.value == 128;
     var res = await VideoHttp.relationMod(
       mid: mid,
-      act: relation.value != 128 ? 5 : 6,
+      act: isBlocked ? 6 : 5,
       reSrc: 11,
     );
     if (res['status']) {
-      relation.value = relation.value != 128 ? 128 : 0;
+      relation.value = isBlocked ? 0 : 128;
     }
   }
 
@@ -212,9 +203,7 @@ class MemberController extends CommonDataController<SpaceData, SpaceData?>
         context: context,
         mid: mid,
         isFollow: isFollow,
-        callback: (attribute) {
-          relation.value = attribute;
-        },
+        callback: (attribute) => relation.value = attribute,
       );
     }
   }

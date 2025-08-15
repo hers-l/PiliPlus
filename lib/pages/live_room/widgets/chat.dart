@@ -11,18 +11,23 @@ class LiveRoomChat extends StatelessWidget {
     super.key,
     required this.roomId,
     required this.liveRoomController,
-    this.isPP,
+    this.isPP = false,
   });
 
   final int roomId;
   final LiveRoomController liveRoomController;
-  final bool? isPP;
+  final bool isPP;
   bool get disableAutoScroll => liveRoomController.disableAutoScroll.value;
 
   @override
   Widget build(BuildContext context) {
+    late final bg = isPP
+        ? Colors.black.withValues(alpha: 0.4)
+        : const Color(0x15FFFFFF);
+    late final nameColor = isPP
+        ? Colors.white.withValues(alpha: 0.9)
+        : Colors.white.withValues(alpha: 0.6);
     return Stack(
-      clipBehavior: Clip.none,
       children: [
         Obx(
           () => ListView.separated(
@@ -37,12 +42,12 @@ class LiveRoomChat extends StatelessWidget {
                 alignment: Alignment.centerLeft,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
-                    color: isPP == true
-                        ? Colors.black.withValues(alpha: 0.3)
-                        : const Color(0x15FFFFFF),
+                    color: bg,
                     borderRadius: const BorderRadius.all(Radius.circular(18)),
                   ),
                   child: Text.rich(
@@ -51,7 +56,7 @@ class LiveRoomChat extends StatelessWidget {
                         TextSpan(
                           text: '${item['name']}: ',
                           style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.6),
+                            color: nameColor,
                             fontSize: 14,
                           ),
                           recognizer: TapGestureRecognizer()
@@ -89,7 +94,7 @@ class LiveRoomChat extends StatelessWidget {
                   ),
                 )
               : const SizedBox.shrink(),
-        )
+        ),
       ],
     );
   }
@@ -99,7 +104,7 @@ class LiveRoomChat extends StatelessWidget {
     dynamic uemote = obj['uemote'];
     List<String> list = [
       if (emots != null) ...emots.keys,
-      if (uemote is Map) uemote['emoticon_unique'].replaceFirst('upower_', '')
+      if (uemote is Map) uemote['emoticon_unique'].replaceFirst('upower_', ''),
     ];
     if (list.isNotEmpty) {
       RegExp regExp = RegExp(list.map(RegExp.escape).join('|'));
@@ -109,16 +114,19 @@ class LiveRoomChat extends StatelessWidget {
         onMatch: (Match match) {
           String key = match[0]!;
           dynamic emote = emots?[key] ?? uemote;
-          spanChildren.add(WidgetSpan(
-            child: ExcludeSemantics(
+          spanChildren.add(
+            WidgetSpan(
+              child: ExcludeSemantics(
                 child: NetworkImgLayer(
-              src: emote['url'],
-              type: ImageType.emote,
-              width: emote['width'].toDouble(),
-              height: emote['height'].toDouble(),
-              semanticsLabel: key,
-            )),
-          ));
+                  src: emote['url'],
+                  type: ImageType.emote,
+                  width: emote['width'].toDouble(),
+                  height: emote['height'].toDouble(),
+                  semanticsLabel: key,
+                ),
+              ),
+            ),
+          );
           return '';
         },
         onNonMatch: (String nonMatchStr) {

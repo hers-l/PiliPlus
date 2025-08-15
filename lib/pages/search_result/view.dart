@@ -1,5 +1,5 @@
 import 'package:PiliPlus/common/widgets/scroll_physics.dart';
-import 'package:PiliPlus/models/common/search_type.dart';
+import 'package:PiliPlus/models/common/search/search_type.dart';
 import 'package:PiliPlus/pages/search/controller.dart';
 import 'package:PiliPlus/pages/search_panel/article/view.dart';
 import 'package:PiliPlus/pages/search_panel/live/view.dart';
@@ -41,10 +41,11 @@ class _SearchResultPageState extends State<SearchResultPage>
 
     if (_isFromSearch == true) {
       try {
-        sSearchController =
-            Get.find<SSearchController>(tag: Get.parameters['tag']);
+        sSearchController = Get.find<SSearchController>(
+          tag: Get.parameters['tag'],
+        );
+        _tabController.addListener(listener);
       } catch (_) {}
-      _tabController.addListener(listener);
     }
   }
 
@@ -111,25 +112,29 @@ class _SearchResultPageState extends State<SearchResultPage>
                         () {
                           int count = _searchResultController.count[item.index];
                           return Tab(
-                              text:
-                                  '${item.label}${count != -1 ? ' ${count > 99 ? '99+' : count}' : ''}');
+                            text:
+                                '${item.label}${count != -1 ? ' ${count > 99 ? '99+' : count}' : ''}',
+                          );
                         },
                       ),
                     )
                     .toList(),
                 isScrollable: true,
                 indicatorWeight: 0,
-                indicatorPadding:
-                    const EdgeInsets.symmetric(horizontal: 3, vertical: 8),
+                indicatorPadding: const EdgeInsets.symmetric(
+                  horizontal: 3,
+                  vertical: 8,
+                ),
                 indicator: BoxDecoration(
                   color: theme.colorScheme.secondaryContainer,
                   borderRadius: const BorderRadius.all(Radius.circular(20)),
                 ),
                 indicatorSize: TabBarIndicatorSize.tab,
                 labelColor: theme.colorScheme.onSecondaryContainer,
-                labelStyle: TabBarTheme.of(context)
-                        .labelStyle
-                        ?.copyWith(fontSize: 13) ??
+                labelStyle:
+                    TabBarTheme.of(
+                      context,
+                    ).labelStyle?.copyWith(fontSize: 13) ??
                     const TextStyle(fontSize: 13),
                 dividerColor: Colors.transparent,
                 dividerHeight: 0,
@@ -153,37 +158,36 @@ class _SearchResultPageState extends State<SearchResultPage>
                     .map(
                       (item) => switch (item) {
                         // SearchType.all => SearchAllPanel(
-                        //     tag: _tag,
-                        //     searchType: item,
-                        //     keyword: _searchResultController.keyword,
-                        //   ),
+                        //   tag: _tag,
+                        //   searchType: item,
+                        //   keyword: _searchResultController.keyword,
+                        // ),
                         SearchType.video => SearchVideoPanel(
-                            tag: _tag,
-                            searchType: item,
-                            keyword: _searchResultController.keyword,
-                          ),
+                          tag: _tag,
+                          searchType: item,
+                          keyword: _searchResultController.keyword,
+                        ),
                         SearchType.media_bangumi ||
-                        SearchType.media_ft =>
-                          SearchPgcPanel(
-                            tag: _tag,
-                            searchType: item,
-                            keyword: _searchResultController.keyword,
-                          ),
+                        SearchType.media_ft => SearchPgcPanel(
+                          tag: _tag,
+                          searchType: item,
+                          keyword: _searchResultController.keyword,
+                        ),
                         SearchType.live_room => SearchLivePanel(
-                            tag: _tag,
-                            searchType: item,
-                            keyword: _searchResultController.keyword,
-                          ),
+                          tag: _tag,
+                          searchType: item,
+                          keyword: _searchResultController.keyword,
+                        ),
                         SearchType.bili_user => SearchUserPanel(
-                            tag: _tag,
-                            searchType: item,
-                            keyword: _searchResultController.keyword,
-                          ),
+                          tag: _tag,
+                          searchType: item,
+                          keyword: _searchResultController.keyword,
+                        ),
                         SearchType.article => SearchArticlePanel(
-                            tag: _tag,
-                            searchType: item,
-                            keyword: _searchResultController.keyword,
-                          ),
+                          tag: _tag,
+                          searchType: item,
+                          keyword: _searchResultController.keyword,
+                        ),
                       },
                     )
                     .toList(),

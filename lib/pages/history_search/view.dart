@@ -1,6 +1,6 @@
 import 'package:PiliPlus/models_new/history/data.dart';
 import 'package:PiliPlus/models_new/history/list.dart';
-import 'package:PiliPlus/pages/common/common_search_page.dart';
+import 'package:PiliPlus/pages/common/search/common_search_page.dart';
 import 'package:PiliPlus/pages/history/widgets/item.dart';
 import 'package:PiliPlus/pages/history_search/controller.dart';
 import 'package:PiliPlus/utils/grid.dart';
@@ -15,8 +15,13 @@ class HistorySearchPage extends CommonSearchPage {
   State<HistorySearchPage> createState() => _HistorySearchPageState();
 }
 
-class _HistorySearchPageState extends CommonSearchPageState<HistorySearchPage,
-    HistoryData, HistoryItemModel> {
+class _HistorySearchPageState
+    extends
+        CommonSearchPageState<
+          HistorySearchPage,
+          HistoryData,
+          HistoryItemModel
+        > {
   @override
   final HistorySearchController controller = Get.put(
     HistorySearchController(),
@@ -37,10 +42,8 @@ class _HistorySearchPageState extends CommonSearchPageState<HistorySearchPage,
           return HistoryItem(
             item: item,
             ctr: controller,
-            onChoose: null,
-            onDelete: (kid, business) {
-              controller.onDelHistory(index, kid, business);
-            },
+            onDelete: (kid, business) =>
+                controller.onDelHistory(index, kid, business),
           );
         },
       ),

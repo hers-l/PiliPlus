@@ -13,22 +13,8 @@ import 'package:flutter/rendering.dart';
 import 'package:get/get.dart';
 
 class VideoReplyPanel extends StatefulWidget {
-  final String? bvid;
-  final int oid;
-  final int rpid;
-  final int replyLevel;
-  final String heroTag;
-  final Function(ReplyInfo replyItem, int? rpid) replyReply;
-  final VoidCallback? onViewImage;
-  final ValueChanged<int>? onDismissed;
-  final Function(List<String>, int)? callback;
-  final bool? needController;
-
   const VideoReplyPanel({
     super.key,
-    this.bvid,
-    required this.oid,
-    this.rpid = 0,
     this.replyLevel = 1,
     required this.heroTag,
     required this.replyReply,
@@ -37,6 +23,14 @@ class VideoReplyPanel extends StatefulWidget {
     this.callback,
     this.needController,
   });
+
+  final int replyLevel;
+  final String heroTag;
+  final Function(ReplyInfo replyItem, int? rpid) replyReply;
+  final VoidCallback? onViewImage;
+  final ValueChanged<int>? onDismissed;
+  final Function(List<String>, int)? callback;
+  final bool? needController;
 
   @override
   State<VideoReplyPanel> createState() => _VideoReplyPanelState();
@@ -97,6 +91,7 @@ class _VideoReplyPanelState extends State<VideoReplyPanel>
   Widget build(BuildContext context) {
     super.build(context);
     final theme = Theme.of(context);
+    final bottom = MediaQuery.paddingOf(context).bottom;
     return refreshIndicator(
       onRefresh: _videoReplyController.onRefresh,
       child: Stack(
@@ -134,8 +129,7 @@ class _VideoReplyPanelState extends State<VideoReplyPanel>
                         SizedBox(
                           height: 35,
                           child: TextButton.icon(
-                            onPressed: () =>
-                                _videoReplyController.queryBySort(),
+                            onPressed: _videoReplyController.queryBySort,
                             icon: Icon(
                               Icons.sort,
                               size: 16,
@@ -151,18 +145,23 @@ class _VideoReplyPanelState extends State<VideoReplyPanel>
                               ),
                             ),
                           ),
-                        )
+                        ),
                       ],
                     ),
                   ),
                 ),
               ),
-              Obx(() =>
-                  _buildBody(theme, _videoReplyController.loadingState.value)),
+              Obx(
+                () => _buildBody(
+                  theme,
+                  bottom,
+                  _videoReplyController.loadingState.value,
+                ),
+              ),
             ],
           ),
           Positioned(
-            bottom: MediaQuery.paddingOf(context).bottom + 14,
+            bottom: bottom + 14,
             right: 14,
             child: SlideTransition(
               position: _videoReplyController.anim,
@@ -173,7 +172,7 @@ class _VideoReplyPanelState extends State<VideoReplyPanel>
                   _videoReplyController.onReply(
                     context,
                     oid: _videoReplyController.aid,
-                    replyType: 1,
+                    replyType: _videoReplyController.videoType.replyType,
                   );
                 },
                 tooltip: '发表评论',
@@ -186,69 +185,69 @@ class _VideoReplyPanelState extends State<VideoReplyPanel>
     );
   }
 
-  Widget _buildBody(ThemeData theme, LoadingState loadingState) {
+  Widget _buildBody(ThemeData theme, double bottom, LoadingState loadingState) {
     return switch (loadingState) {
       Loading() => SliverList.builder(
-          itemBuilder: (BuildContext context, index) {
-            return const VideoReplySkeleton();
-          },
-          itemCount: 5,
-        ),
-      Success(:var response) => response?.isNotEmpty == true
-          ? SliverList.builder(
-              itemBuilder: (context, index) {
-                double bottom = MediaQuery.paddingOf(context).bottom;
-                if (index == response.length) {
-                  _videoReplyController.onLoadMore();
-                  return Container(
-                    alignment: Alignment.center,
-                    padding: EdgeInsets.only(bottom: bottom),
-                    height: bottom + 100,
-                    child: Text(
-                      _videoReplyController.isEnd ? '没有更多了' : '加载中...',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: theme.colorScheme.outline,
+        itemBuilder: (BuildContext context, index) {
+          return const VideoReplySkeleton();
+        },
+        itemCount: 5,
+      ),
+      Success(:var response) =>
+        response?.isNotEmpty == true
+            ? SliverList.builder(
+                itemBuilder: (context, index) {
+                  if (index == response.length) {
+                    _videoReplyController.onLoadMore();
+                    return Container(
+                      alignment: Alignment.center,
+                      padding: EdgeInsets.only(bottom: bottom),
+                      height: bottom + 100,
+                      child: Text(
+                        _videoReplyController.isEnd ? '没有更多了' : '加载中...',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.colorScheme.outline,
+                        ),
                       ),
-                    ),
-                  );
-                } else {
-                  return ReplyItemGrpc(
-                    replyItem: response[index],
-                    replyLevel: widget.replyLevel,
-                    replyReply: widget.replyReply,
-                    onReply: (replyItem) => _videoReplyController.onReply(
-                      context,
-                      replyItem: replyItem,
-                    ),
-                    onDelete: (item, subIndex) =>
-                        _videoReplyController.onRemove(index, item, subIndex),
-                    upMid: _videoReplyController.upMid,
-                    getTag: () => heroTag,
-                    onViewImage: widget.onViewImage,
-                    onDismissed: widget.onDismissed,
-                    callback: widget.callback,
-                    onCheckReply: (item) => _videoReplyController
-                        .onCheckReply(item, isManual: true),
-                    onToggleTop: (item) => _videoReplyController.onToggleTop(
-                      item,
-                      index,
-                      _videoReplyController.aid,
-                      1,
-                    ),
-                  );
-                }
-              },
-              itemCount: response.length + 1,
-            )
-          : HttpError(
-              errMsg: '还没有评论',
-              onReload: _videoReplyController.onReload,
-            ),
+                    );
+                  } else {
+                    return ReplyItemGrpc(
+                      replyItem: response[index],
+                      replyLevel: widget.replyLevel,
+                      replyReply: widget.replyReply,
+                      onReply: (replyItem) => _videoReplyController.onReply(
+                        context,
+                        replyItem: replyItem,
+                      ),
+                      onDelete: (item, subIndex) =>
+                          _videoReplyController.onRemove(index, item, subIndex),
+                      upMid: _videoReplyController.upMid,
+                      getTag: () => heroTag,
+                      onViewImage: widget.onViewImage,
+                      onDismissed: widget.onDismissed,
+                      callback: widget.callback,
+                      onCheckReply: (item) => _videoReplyController
+                          .onCheckReply(item, isManual: true),
+                      onToggleTop: (item) => _videoReplyController.onToggleTop(
+                        item,
+                        index,
+                        _videoReplyController.aid,
+                        _videoReplyController.videoType.replyType,
+                      ),
+                    );
+                  }
+                },
+                itemCount: response.length + 1,
+              )
+            : HttpError(
+                errMsg: '还没有评论',
+                onReload: _videoReplyController.onReload,
+              ),
       Error(:var errMsg) => HttpError(
-          errMsg: errMsg,
-          onReload: _videoReplyController.onReload,
-        ),
+        errMsg: errMsg,
+        onReload: _videoReplyController.onReload,
+      ),
     };
   }
 }

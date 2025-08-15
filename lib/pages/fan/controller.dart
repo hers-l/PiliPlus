@@ -8,7 +8,6 @@ import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 
 class FansController extends CommonListController<FansData, FansItemModel> {
   FansController(this.mid);
-  int ps = 20;
   int total = 0;
   int mid;
 
@@ -25,11 +24,10 @@ class FansController extends CommonListController<FansData, FansItemModel> {
 
   @override
   Future<LoadingState<FansData>> customGetData() => FanHttp.fans(
-        vmid: mid,
-        pn: page,
-        ps: ps,
-        orderType: 'attention',
-      );
+    vmid: mid,
+    pn: page,
+    orderType: 'attention',
+  );
 
   Future<void> onRemoveFan(int index, int mid) async {
     final res = await VideoHttp.relationMod(

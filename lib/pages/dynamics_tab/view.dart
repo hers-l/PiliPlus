@@ -1,7 +1,5 @@
 import 'dart:async';
 
-import 'package:PiliPlus/common/constants.dart';
-import 'package:PiliPlus/common/skeleton/dynamic_card.dart';
 import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
 import 'package:PiliPlus/common/widgets/refresh_indicator.dart';
 import 'package:PiliPlus/http/loading_state.dart';
@@ -15,9 +13,11 @@ import 'package:PiliPlus/pages/dynamics_tab/controller.dart';
 import 'package:PiliPlus/pages/main/controller.dart';
 import 'package:PiliPlus/utils/global_data.dart';
 import 'package:PiliPlus/utils/grid.dart';
+import 'package:PiliPlus/utils/waterfall.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:waterfall_flow/waterfall_flow.dart';
+import 'package:waterfall_flow/waterfall_flow.dart'
+    hide SliverWaterfallFlowDelegateWithMaxCrossAxisExtent;
 
 class DynamicsTabPage extends CommonPage {
   const DynamicsTabPage({super.key, required this.dynamicsType});
@@ -26,46 +26,11 @@ class DynamicsTabPage extends CommonPage {
 
   @override
   State<DynamicsTabPage> createState() => _DynamicsTabPageState();
-
-  static Widget dynSkeleton(bool dynamicsWaterfallFlow) {
-    if (!dynamicsWaterfallFlow) {
-      return SliverCrossAxisGroup(
-        slivers: [
-          const SliverFillRemaining(),
-          SliverConstrainedCrossAxis(
-            maxExtent: Grid.smallCardWidth * 2,
-            sliver: SliverList.builder(
-              itemBuilder: (context, index) {
-                return const DynamicCardSkeleton();
-              },
-              itemCount: 10,
-            ),
-          ),
-          const SliverFillRemaining()
-        ],
-      );
-    }
-    return SliverGrid(
-      gridDelegate: SliverGridDelegateWithExtentAndRatio(
-        crossAxisSpacing: StyleString.cardSpace / 2,
-        mainAxisSpacing: StyleString.cardSpace / 2,
-        maxCrossAxisExtent: Grid.smallCardWidth * 2,
-        childAspectRatio: StyleString.aspectRatio,
-        mainAxisExtent: 50,
-      ),
-      delegate: SliverChildBuilderDelegate(
-        (context, index) {
-          return const DynamicCardSkeleton();
-        },
-        childCount: 10,
-      ),
-    );
-  }
 }
 
 class _DynamicsTabPageState
     extends CommonPageState<DynamicsTabPage, DynamicsTabController>
-    with AutomaticKeepAliveClientMixin {
+    with AutomaticKeepAliveClientMixin, DynMixin {
   StreamSubscription? _listener;
   late final MainController _mainController = Get.find<MainController>();
 
@@ -135,61 +100,60 @@ class _DynamicsTabPageState
 
   Widget _buildBody(LoadingState<List<DynamicItemModel>?> loadingState) {
     return switch (loadingState) {
-      Loading() =>
-        DynamicsTabPage.dynSkeleton(GlobalData().dynamicsWaterfallFlow),
-      Success(:var response) => response?.isNotEmpty == true
-          ? GlobalData().dynamicsWaterfallFlow
-              ? SliverWaterfallFlow.extent(
-                  maxCrossAxisExtent: Grid.smallCardWidth * 2,
-                  crossAxisSpacing: StyleString.cardSpace / 2,
-                  lastChildLayoutTypeBuilder: (index) {
-                    if (index == response.length - 1) {
-                      controller.onLoadMore();
-                    }
-                    return index == response.length
-                        ? LastChildLayoutType.foot
-                        : LastChildLayoutType.none;
-                  },
-                  children: [
-                    for (int index = 0; index < response!.length; index++)
-                      DynamicPanel(
-                        item: response[index],
-                        onRemove: (idStr) => controller.onRemove(index, idStr),
-                        onBlock: () => controller.onBlock(index),
-                      )
-                  ],
-                )
-              : SliverCrossAxisGroup(
-                  slivers: [
-                    const SliverFillRemaining(),
-                    SliverConstrainedCrossAxis(
-                      maxExtent: Grid.smallCardWidth * 2,
-                      sliver: SliverList.builder(
-                        itemBuilder: (context, index) {
+      Loading() => dynSkeleton,
+      Success(:var response) =>
+        response?.isNotEmpty == true
+            ? GlobalData().dynamicsWaterfallFlow
+                  ? SliverWaterfallFlow(
+                      gridDelegate: gridDelegate,
+                      delegate: SliverChildBuilderDelegate(
+                        (_, index) {
                           if (index == response.length - 1) {
                             controller.onLoadMore();
                           }
-                          final item = response[index];
                           return DynamicPanel(
-                            item: item,
+                            item: response[index],
                             onRemove: (idStr) =>
                                 controller.onRemove(index, idStr),
                             onBlock: () => controller.onBlock(index),
+                            maxWidth: maxWidth,
                           );
                         },
-                        itemCount: response!.length,
+                        childCount: response!.length,
                       ),
-                    ),
-                    const SliverFillRemaining(),
-                  ],
-                )
-          : HttpError(
-              onReload: controller.onReload,
-            ),
+                    )
+                  : SliverCrossAxisGroup(
+                      slivers: [
+                        const SliverFillRemaining(),
+                        SliverConstrainedCrossAxis(
+                          maxExtent: Grid.smallCardWidth * 2,
+                          sliver: SliverList.builder(
+                            itemBuilder: (context, index) {
+                              if (index == response.length - 1) {
+                                controller.onLoadMore();
+                              }
+                              final item = response[index];
+                              return DynamicPanel(
+                                item: item,
+                                onRemove: (idStr) =>
+                                    controller.onRemove(index, idStr),
+                                onBlock: () => controller.onBlock(index),
+                                maxWidth: maxWidth,
+                              );
+                            },
+                            itemCount: response!.length,
+                          ),
+                        ),
+                        const SliverFillRemaining(),
+                      ],
+                    )
+            : HttpError(
+                onReload: controller.onReload,
+              ),
       Error(:var errMsg) => HttpError(
-          errMsg: errMsg,
-          onReload: controller.onReload,
-        ),
+        errMsg: errMsg,
+        onReload: controller.onReload,
+      ),
     };
   }
 }

@@ -7,6 +7,7 @@ import 'package:PiliPlus/pages/video/reply_new/view.dart';
 import 'package:PiliPlus/utils/id_utils.dart';
 import 'package:PiliPlus/utils/request_utils.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
+import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get/get_navigation/src/dialog/dialog_route.dart';
@@ -52,12 +53,6 @@ class VideoReplyReplyController extends ReplyController
   }
 
   @override
-  Future<void> onRefresh() {
-    paginationReply = null;
-    return super.onRefresh();
-  }
-
-  @override
   List<ReplyInfo>? getDataList(response) {
     return isDialogue ? response.replies : response.root.replies;
   }
@@ -66,6 +61,7 @@ class VideoReplyReplyController extends ReplyController
   bool customHandleResponse(bool isRefresh, Success response) {
     final data = response.response;
 
+    subjectControl = data.subjectControl;
     upMid ??= data.subjectControl.upMid;
     paginationReply = data.paginationReply;
     isEnd = data.cursor.isEnd;
@@ -77,26 +73,26 @@ class VideoReplyReplyController extends ReplyController
         firstFloor = data.root;
       }
       if (id != null) {
-        index = data.root.replies.indexWhere((item) => item.id.toInt() == id);
-        if (index == -1) {
-          index = null;
-        } else {
+        final id64 = Int64(id!);
+        final index = data.root.replies.indexWhere((item) => item.id == id64);
+        if (index != -1) {
+          this.index = index;
           controller = AnimationController(
             duration: const Duration(milliseconds: 300),
             vsync: this,
           );
           WidgetsBinding.instance.addPostFrameCallback((_) async {
-            if (index != null) {
-              try {
-                itemScrollCtr.jumpTo(
-                  index: hasRoot ? index! + 3 : index! + 1,
-                  alignment: 0.25,
-                );
-                await Future.delayed(const Duration(milliseconds: 800));
-                await controller?.forward();
-                index = null;
-              } catch (_) {}
-            }
+            try {
+              itemScrollCtr.jumpTo(
+                index: hasRoot ? index + 3 : index + 1,
+                alignment: 0.25,
+              );
+              await Future.delayed(
+                const Duration(milliseconds: 800),
+                controller?.forward,
+              );
+              this.index = null;
+            } catch (_) {}
           });
         }
         id = null;
@@ -141,60 +137,69 @@ class VideoReplyReplyController extends ReplyController
     int? index,
   }) {
     assert(replyItem != null && index != null);
+
+    final (bool inputDisable, String? hint) = replyHint;
+    if (inputDisable) {
+      return;
+    }
+
     final oid = replyItem!.oid.toInt();
     final root = replyItem.id.toInt();
     final key = oid + root;
 
     Navigator.of(context)
         .push(
-      GetDialogRoute(
-        pageBuilder: (buildContext, animation, secondaryAnimation) {
-          return ReplyPage(
-            oid: oid,
-            root: root,
-            parent: root,
-            replyType: this.replyType,
-            replyItem: replyItem,
-            items: savedReplies[key],
-            onSave: (reply) {
-              if (reply.isEmpty) {
-                savedReplies.remove(key);
-              } else {
-                savedReplies[key] = reply.toList();
-              }
+          GetDialogRoute(
+            pageBuilder: (buildContext, animation, secondaryAnimation) {
+              return ReplyPage(
+                hint: hint,
+                oid: oid,
+                root: root,
+                parent: root,
+                replyType: this.replyType,
+                replyItem: replyItem,
+                items: savedReplies[key],
+                onSave: (reply) {
+                  if (reply.isEmpty) {
+                    savedReplies.remove(key);
+                  } else {
+                    savedReplies[key] = reply.toList();
+                  }
+                },
+              );
             },
-          );
-        },
-        transitionDuration: const Duration(milliseconds: 500),
-        transitionBuilder: (context, animation, secondaryAnimation, child) {
-          const begin = Offset(0.0, 1.0);
-          const end = Offset.zero;
-          const curve = Curves.linear;
+            transitionDuration: const Duration(milliseconds: 500),
+            transitionBuilder: (context, animation, secondaryAnimation, child) {
+              const begin = Offset(0.0, 1.0);
+              const end = Offset.zero;
+              const curve = Curves.linear;
 
-          var tween =
-              Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+              var tween = Tween(
+                begin: begin,
+                end: end,
+              ).chain(CurveTween(curve: curve));
 
-          return SlideTransition(
-            position: animation.drive(tween),
-            child: child,
-          );
-        },
-      ),
-    )
+              return SlideTransition(
+                position: animation.drive(tween),
+                child: child,
+              );
+            },
+          ),
+        )
         .then((res) {
-      if (res != null) {
-        savedReplies.remove(key);
-        ReplyInfo replyInfo = RequestUtils.replyCast(res);
+          if (res != null) {
+            savedReplies.remove(key);
+            ReplyInfo replyInfo = RequestUtils.replyCast(res);
 
-        count.value += 1;
-        loadingState
-          ..value.dataOrNull?.insert(index! + 1, replyInfo)
-          ..refresh();
-        if (enableCommAntifraud) {
-          onCheckReply(replyInfo, isManual: false);
-        }
-      }
-    });
+            count.value += 1;
+            loadingState
+              ..value.dataOrNull?.insert(index! + 1, replyInfo)
+              ..refresh();
+            if (enableCommAntifraud) {
+              onCheckReply(replyInfo, isManual: false);
+            }
+          }
+        });
   }
 
   @override

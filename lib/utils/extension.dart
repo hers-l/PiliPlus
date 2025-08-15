@@ -1,13 +1,9 @@
 import 'package:PiliPlus/common/widgets/dialog/dialog.dart';
-import 'package:PiliPlus/common/widgets/interactiveviewer_gallery/hero_dialog_route.dart';
-import 'package:PiliPlus/common/widgets/interactiveviewer_gallery/interactiveviewer_gallery.dart';
 import 'package:PiliPlus/grpc/bilibili/app/im/v1.pbenum.dart'
     show IMSettingType, ThreeDotItemType;
-import 'package:PiliPlus/models/common/image_preview_type.dart';
 import 'package:PiliPlus/pages/common/common_whisper_controller.dart';
 import 'package:PiliPlus/pages/contact/view.dart';
 import 'package:PiliPlus/pages/whisper_settings/view.dart';
-import 'package:PiliPlus/utils/global_data.dart';
 import 'package:floating/floating.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
@@ -23,14 +19,22 @@ extension ImageExtension on num? {
   }
 }
 
+extension IntExt on int? {
+  int? operator +(int other) => this == null ? null : this! + other;
+  int? operator -(int other) => this == null ? null : this! - other;
+}
+
 extension ScrollControllerExt on ScrollController {
   void animToTop() {
     if (!hasClients) return;
     if (offset >= Get.mediaQuery.size.height * 7) {
       jumpTo(0);
     } else {
-      animateTo(0,
-          duration: const Duration(milliseconds: 500), curve: Curves.easeInOut);
+      animateTo(
+        0,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      );
     }
   }
 
@@ -78,32 +82,9 @@ extension StringExt on String? {
   bool get isNullOrEmpty => this == null || this!.isEmpty;
 }
 
-extension BuildContextExt on BuildContext {
-  Color get vipColor {
-    return Theme.of(this).brightness == Brightness.light
-        ? const Color(0xFFFF6699)
-        : const Color(0xFFD44E7D);
-  }
-
-  Future<void> imageView({
-    int initialPage = 0,
-    required List<SourceModel> imgList,
-    ValueChanged<int>? onDismissed,
-    int? quality,
-  }) {
-    bool isMemberPage = Get.currentRoute.startsWith('/member?');
-    return Navigator.of(this).push(
-      HeroDialogRoute(
-        builder: (context) => InteractiveviewerGallery(
-          sources: imgList,
-          initIndex: initialPage,
-          onDismissed: onDismissed,
-          setStatusBar: !isMemberPage,
-          quality: quality ?? GlobalData().imgQuality,
-        ),
-      ),
-    );
-  }
+extension ColorSchemeExt on ColorScheme {
+  Color get vipColor =>
+      brightness.isLight ? const Color(0xFFFF6699) : const Color(0xFFD44E7D);
 }
 
 extension Unique<E, Id> on List<E> {
@@ -122,8 +103,11 @@ extension ColorExtension on Color {
 }
 
 extension BrightnessExt on Brightness {
-  Brightness get reverse =>
-      this == Brightness.light ? Brightness.dark : Brightness.light;
+  Brightness get reverse => isLight ? Brightness.dark : Brightness.light;
+
+  bool get isLight => this == Brightness.light;
+
+  bool get isDark => this == Brightness.dark;
 }
 
 extension RationalExt on Rational {
@@ -141,20 +125,32 @@ extension RationalExt on Rational {
 
 extension ThreeDotItemTypeExt on ThreeDotItemType {
   Icon get icon => switch (this) {
-        ThreeDotItemType.THREE_DOT_ITEM_TYPE_MSG_SETTING =>
-          const Icon(Icons.settings, size: 20),
-        ThreeDotItemType.THREE_DOT_ITEM_TYPE_READ_ALL =>
-          const Icon(Icons.cleaning_services, size: 20),
-        ThreeDotItemType.THREE_DOT_ITEM_TYPE_CLEAR_LIST =>
-          const Icon(Icons.delete_forever_outlined, size: 20),
-        ThreeDotItemType.THREE_DOT_ITEM_TYPE_UP_HELPER =>
-          const Icon(Icons.live_tv, size: 20),
-        ThreeDotItemType.THREE_DOT_ITEM_TYPE_CONTACTS =>
-          const Icon(Icons.account_box_outlined, size: 20),
-        ThreeDotItemType.THREE_DOT_ITEM_TYPE_FANS_GROUP_HELPER =>
-          const Icon(Icons.notifications_none, size: 20),
-        _ => const Icon(MdiIcons.circleMedium, size: 20),
-      };
+    ThreeDotItemType.THREE_DOT_ITEM_TYPE_MSG_SETTING => const Icon(
+      Icons.settings,
+      size: 20,
+    ),
+    ThreeDotItemType.THREE_DOT_ITEM_TYPE_READ_ALL => const Icon(
+      Icons.cleaning_services,
+      size: 20,
+    ),
+    ThreeDotItemType.THREE_DOT_ITEM_TYPE_CLEAR_LIST => const Icon(
+      Icons.delete_forever_outlined,
+      size: 20,
+    ),
+    ThreeDotItemType.THREE_DOT_ITEM_TYPE_UP_HELPER => const Icon(
+      Icons.live_tv,
+      size: 20,
+    ),
+    ThreeDotItemType.THREE_DOT_ITEM_TYPE_CONTACTS => const Icon(
+      Icons.account_box_outlined,
+      size: 20,
+    ),
+    ThreeDotItemType.THREE_DOT_ITEM_TYPE_FANS_GROUP_HELPER => const Icon(
+      Icons.notifications_none,
+      size: 20,
+    ),
+    _ => const Icon(MdiIcons.circleMedium, size: 20),
+  };
 
   void action({
     required BuildContext context,
@@ -176,9 +172,11 @@ extension ThreeDotItemTypeExt on ThreeDotItemType {
           onConfirm: controller.onDeleteList,
         );
       case ThreeDotItemType.THREE_DOT_ITEM_TYPE_MSG_SETTING:
-        Get.to(const WhisperSettingsPage(
-          imSettingType: IMSettingType.SETTING_TYPE_NEED_ALL,
-        ));
+        Get.to(
+          const WhisperSettingsPage(
+            imSettingType: IMSettingType.SETTING_TYPE_NEED_ALL,
+          ),
+        );
       case ThreeDotItemType.THREE_DOT_ITEM_TYPE_UP_HELPER:
         Get.toNamed(
           '/whisperDetail',

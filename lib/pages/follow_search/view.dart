@@ -1,6 +1,6 @@
 import 'package:PiliPlus/models_new/follow/data.dart';
 import 'package:PiliPlus/models_new/follow/list.dart';
-import 'package:PiliPlus/pages/common/common_search_page.dart';
+import 'package:PiliPlus/pages/common/search/common_search_page.dart';
 import 'package:PiliPlus/pages/follow/widgets/follow_item.dart';
 import 'package:PiliPlus/pages/follow_search/controller.dart';
 import 'package:PiliPlus/utils/utils.dart';
@@ -21,8 +21,9 @@ class FollowSearchPage extends CommonSearchPage {
   State<FollowSearchPage> createState() => _FollowSearchPageState();
 }
 
-class _FollowSearchPageState extends CommonSearchPageState<FollowSearchPage,
-    FollowData, FollowItemModel> {
+class _FollowSearchPageState
+    extends
+        CommonSearchPageState<FollowSearchPage, FollowData, FollowItemModel> {
   @override
   late final FollowSearchController controller = Get.put(
     FollowSearchController(widget.mid ?? Get.arguments['mid']),

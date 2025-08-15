@@ -8,6 +8,7 @@ import 'package:PiliPlus/utils/id_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+// TODO refa
 class PagesPanel extends StatefulWidget {
   const PagesPanel({
     super.key,
@@ -16,7 +17,7 @@ class PagesPanel extends StatefulWidget {
     required this.bvid,
     required this.heroTag,
     this.showEpisodes,
-    required this.videoIntroController,
+    required this.ugcIntroController,
   });
 
   final List<Part>? list;
@@ -25,7 +26,7 @@ class PagesPanel extends StatefulWidget {
   final String bvid;
   final String heroTag;
   final Function? showEpisodes;
-  final VideoIntroController videoIntroController;
+  final UgcIntroController ugcIntroController;
 
   @override
   State<PagesPanel> createState() => _PagesPanelState();
@@ -39,15 +40,16 @@ class _PagesPanelState extends State<PagesPanel> {
   StreamSubscription? _listener;
 
   List<Part> get pages =>
-      widget.list ?? widget.videoIntroController.videoDetail.value.pages!;
+      widget.list ?? widget.ugcIntroController.videoDetail.value.pages!;
 
   @override
   void initState() {
     super.initState();
-    _videoDetailController =
-        Get.find<VideoDetailController>(tag: widget.heroTag);
+    _videoDetailController = Get.find<VideoDetailController>(
+      tag: widget.heroTag,
+    );
     if (widget.list == null) {
-      cid = widget.videoIntroController.lastPlayCid.value;
+      cid = widget.ugcIntroController.cid.value;
       pageIndex = pages.indexWhere((Part e) => e.cid == cid);
       _listener = _videoDetailController.cid.listen((int cid) {
         this.cid = cid;
@@ -68,8 +70,9 @@ class _PagesPanelState extends State<PagesPanel> {
     }
     const double itemWidth = 150;
     final double targetOffset = (pageIndex * itemWidth - itemWidth / 2).clamp(
-        _scrollController.position.minScrollExtent,
-        _scrollController.position.maxScrollExtent);
+      _scrollController.position.minScrollExtent,
+      _scrollController.position.maxScrollExtent,
+    );
     _scrollController.animateTo(
       targetOffset,
       duration: const Duration(milliseconds: 300),
@@ -142,9 +145,9 @@ class _PagesPanelState extends State<PagesPanel> {
               final item = pages[i];
               return Container(
                 width: 150,
-                margin: EdgeInsets.only(
-                  right: i != pages.length - 1 ? 10 : 0,
-                ),
+                margin: i != pages.length - 1
+                    ? const EdgeInsets.only(right: 10)
+                    : null,
                 child: Material(
                   color: theme.colorScheme.onInverseSurface,
                   borderRadius: const BorderRadius.all(Radius.circular(6)),
@@ -154,15 +157,16 @@ class _PagesPanelState extends State<PagesPanel> {
                       if (widget.showEpisodes == null) {
                         Get.back();
                       }
-                      widget.videoIntroController.changeSeasonOrbangu(
-                        null,
-                        widget.bvid,
-                        item.cid,
-                        IdUtils.bv2av(widget.bvid),
-                        widget.cover,
+                      widget.ugcIntroController.onChangeEpisode(
+                        item
+                          ..bvid ??= widget.bvid
+                          ..cover ??= widget.cover,
                       );
                       if (widget.list != null &&
-                          widget.videoIntroController.videoDetail.value
+                          widget
+                                  .ugcIntroController
+                                  .videoDetail
+                                  .value
                                   .ugcSeason !=
                               null) {
                         _videoDetailController.seasonCid = pages.first.cid;
@@ -179,7 +183,7 @@ class _PagesPanelState extends State<PagesPanel> {
                               height: 12,
                               semanticLabel: "正在播放：",
                             ),
-                            const SizedBox(width: 6)
+                            const SizedBox(width: 6),
                           ],
                           Expanded(
                             child: Text(
@@ -202,7 +206,7 @@ class _PagesPanelState extends State<PagesPanel> {
               );
             },
           ),
-        )
+        ),
       ],
     );
   }

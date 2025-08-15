@@ -10,9 +10,7 @@ import 'package:PiliPlus/models/common/stat_type.dart';
 import 'package:PiliPlus/models_new/member/coin_like_arc/item.dart';
 import 'package:PiliPlus/utils/date_util.dart';
 import 'package:PiliPlus/utils/duration_util.dart';
-import 'package:PiliPlus/utils/id_utils.dart';
 import 'package:PiliPlus/utils/page_utils.dart';
-import 'package:PiliPlus/utils/utils.dart';
 import 'package:flutter/material.dart';
 
 class MemberCoinLikeItem extends StatelessWidget {
@@ -40,11 +38,10 @@ class MemberCoinLikeItem extends StatelessWidget {
             int? cid = await SearchHttp.ab2c(aid: item.param);
             if (cid != null) {
               PageUtils.toVideoPage(
-                'bvid=${IdUtils.av2bv(int.parse(item.param!))}&cid=$cid',
-                arguments: {
-                  'videoItem': item,
-                  'heroTag': Utils.makeHeroTag(item.param)
-                },
+                aid: int.parse(item.param!),
+                cid: cid,
+                cover: item.cover,
+                title: item.title,
               );
             }
           }
@@ -59,28 +56,42 @@ class MemberCoinLikeItem extends StatelessWidget {
           children: [
             AspectRatio(
               aspectRatio: StyleString.aspectRatio,
-              child: LayoutBuilder(builder: (context, boxConstraints) {
-                double maxWidth = boxConstraints.maxWidth;
-                double maxHeight = boxConstraints.maxHeight;
-                return Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    NetworkImgLayer(
-                      src: item.cover,
-                      width: maxWidth,
-                      height: maxHeight,
-                      radius: 0,
-                    ),
-                    if (item.duration != null && item.duration! > 0)
-                      PBadge(
-                        bottom: 6,
-                        right: 6,
-                        type: PBadgeType.gray,
-                        text: DurationUtil.formatDuration(item.duration),
-                      )
-                  ],
-                );
-              }),
+              child: LayoutBuilder(
+                builder: (context, boxConstraints) {
+                  double maxWidth = boxConstraints.maxWidth;
+                  double maxHeight = boxConstraints.maxHeight;
+                  return Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      NetworkImgLayer(
+                        src: item.cover,
+                        width: maxWidth,
+                        height: maxHeight,
+                        radius: 0,
+                      ),
+                      if (item.isCooperation == true)
+                        const PBadge(
+                          text: '合作',
+                          top: 6,
+                          right: 6,
+                        )
+                      else if (item.isSteins == true)
+                        const PBadge(
+                          text: '互动',
+                          top: 6,
+                          right: 6,
+                        ),
+                      if (item.duration != null && item.duration! > 0)
+                        PBadge(
+                          bottom: 6,
+                          right: 6,
+                          type: PBadgeType.gray,
+                          text: DurationUtil.formatDuration(item.duration),
+                        ),
+                    ],
+                  );
+                },
+              ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(5, 6, 0, 0),
@@ -117,7 +128,7 @@ class MemberCoinLikeItem extends StatelessWidget {
                           color: Theme.of(context).colorScheme.outline,
                         ),
                       ),
-                      const SizedBox(width: 6)
+                      const SizedBox(width: 6),
                     ],
                   ),
                 ],

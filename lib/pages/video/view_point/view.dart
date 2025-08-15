@@ -2,7 +2,7 @@ import 'package:PiliPlus/common/constants.dart';
 import 'package:PiliPlus/common/widgets/button/icon_button.dart';
 import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
 import 'package:PiliPlus/common/widgets/progress_bar/segment_progress_bar.dart';
-import 'package:PiliPlus/pages/common/common_collapse_slide_page.dart';
+import 'package:PiliPlus/pages/common/slide/common_collapse_slide_page.dart';
 import 'package:PiliPlus/pages/video/controller.dart';
 import 'package:PiliPlus/plugin/pl_player/controller.dart';
 import 'package:PiliPlus/utils/duration_util.dart';
@@ -32,6 +32,14 @@ class _ViewPointsPageState
 
   int currentIndex = -1;
 
+  final _controller = ScrollController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   @override
   Widget buildPage(ThemeData theme) {
     return Scaffold(
@@ -42,7 +50,7 @@ class _ViewPointsPageState
         toolbarHeight: 45,
         actions: [
           const Text(
-            '分段进度条',
+            '分段进度条 ',
             style: TextStyle(fontSize: 16),
           ),
           Obx(
@@ -92,76 +100,87 @@ class _ViewPointsPageState
       color: theme.dividerColor.withValues(alpha: 0.1),
     );
     return ListView.separated(
-      controller: ScrollController(),
+      controller: _controller,
       physics: const AlwaysScrollableScrollPhysics(),
-      padding:
-          EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 80),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.paddingOf(context).bottom + 80,
+      ),
       itemCount: videoDetailController.viewPointList.length,
       itemBuilder: (context, index) {
         Segment segment = videoDetailController.viewPointList[index];
         if (currentIndex == -1 && segment.from != null && segment.to != null) {
-          if (videoDetailController.plPlayerController.positionSeconds.value >=
-                  segment.from! &&
-              videoDetailController.plPlayerController.positionSeconds.value <
-                  segment.to!) {
+          final positionSeconds =
+              videoDetailController.plPlayerController.positionSeconds.value;
+          if (positionSeconds >= segment.from! &&
+              positionSeconds < segment.to!) {
             currentIndex = index;
           }
         }
-        return ListTile(
-          dense: true,
-          onTap: segment.from != null
-              ? () {
-                  currentIndex = index;
-                  plPlayerController?.danmakuController?.clear();
-                  plPlayerController?.videoPlayerController
-                      ?.seek(Duration(seconds: segment.from!));
-                  Get.back();
-                }
-              : null,
-          leading: segment.url?.isNotEmpty == true
-              ? Container(
-                  margin: const EdgeInsets.symmetric(vertical: 6),
-                  decoration: currentIndex == index
-                      ? BoxDecoration(
-                          borderRadius:
-                              const BorderRadius.all(Radius.circular(6)),
-                          border: Border.all(
-                            width: 1.8,
-                            strokeAlign: BorderSide.strokeAlignOutside,
-                            color: theme.colorScheme.primary,
-                          ),
-                        )
-                      : null,
-                  child: LayoutBuilder(
-                    builder: (context, constraints) => NetworkImgLayer(
-                      radius: 6,
-                      src: segment.url,
-                      width: constraints.maxHeight * StyleString.aspectRatio,
-                      height: constraints.maxHeight,
-                    ),
-                  ),
-                )
-              : null,
-          title: Text(
-            segment.title ?? '',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: currentIndex == index ? FontWeight.bold : null,
-              color: currentIndex == index ? theme.colorScheme.primary : null,
-            ),
-          ),
-          subtitle: Text(
-            '${segment.from != null ? DurationUtil.formatDuration(segment.from) : ''} - ${segment.to != null ? DurationUtil.formatDuration(segment.to) : ''}',
-            style: TextStyle(
-              fontSize: 13,
-              color: currentIndex == index
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.outline,
-            ),
-          ),
-        );
+        final isCurr = currentIndex == index;
+        return _buildItem(theme, segment, isCurr);
       },
       separatorBuilder: (context, index) => divider,
+    );
+  }
+
+  Widget _buildItem(ThemeData theme, Segment segment, bool isCurr) {
+    final theme = Theme.of(context);
+    return Material(
+      type: MaterialType.transparency,
+      child: InkWell(
+        onTap: segment.from != null
+            ? () {
+                Get.back();
+                plPlayerController
+                  ?..danmakuController?.clear()
+                  ..videoPlayerController?.seek(
+                    Duration(seconds: segment.from!),
+                  );
+              }
+            : null,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: StyleString.safeSpace,
+            vertical: 5,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              NetworkImgLayer(
+                src: segment.url,
+                width: 140.8,
+                height: 88,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  spacing: 10,
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      segment.title ?? '',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: isCurr
+                          ? TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.primary,
+                            )
+                          : null,
+                    ),
+                    Text(
+                      '${segment.from != null ? DurationUtil.formatDuration(segment.from) : ''} - '
+                      '${segment.to != null ? DurationUtil.formatDuration(segment.to) : ''}',
+                      style: TextStyle(color: theme.colorScheme.outline),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

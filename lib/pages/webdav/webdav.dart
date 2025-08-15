@@ -1,10 +1,11 @@
 import 'dart:convert';
 
 import 'package:PiliPlus/common/widgets/pair.dart';
+import 'package:PiliPlus/utils/context_ext.dart';
 import 'package:PiliPlus/utils/storage.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
-import 'package:get/get.dart';
+import 'package:get/get.dart' hide ContextExtensionss;
 import 'package:webdav_client/webdav_client.dart' as webdav;
 
 class WebDav {
@@ -29,15 +30,16 @@ class WebDav {
 
     try {
       _client = null;
-      final client = webdav.newClient(
-        webDavUri,
-        user: webDavUsername,
-        password: webDavPassword,
-      )
-        ..setHeaders({'accept-charset': 'utf-8'})
-        ..setConnectTimeout(4000)
-        ..setReceiveTimeout(4000)
-        ..setSendTimeout(4000);
+      final client =
+          webdav.newClient(
+              webDavUri,
+              user: webDavUsername,
+              password: webDavPassword,
+            )
+            ..setHeaders({'accept-charset': 'utf-8'})
+            ..setConnectTimeout(4000)
+            ..setReceiveTimeout(4000)
+            ..setSendTimeout(4000);
 
       await client.mkdirAll(_webdavDirectory);
 

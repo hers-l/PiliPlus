@@ -13,11 +13,9 @@ import 'package:PiliPlus/models/common/image_type.dart';
 import 'package:PiliPlus/utils/app_scheme.dart';
 import 'package:PiliPlus/utils/date_util.dart';
 import 'package:PiliPlus/utils/duration_util.dart';
-import 'package:PiliPlus/utils/extension.dart';
 import 'package:PiliPlus/utils/id_utils.dart';
 import 'package:PiliPlus/utils/image_util.dart';
 import 'package:PiliPlus/utils/page_utils.dart';
-import 'package:PiliPlus/utils/utils.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -52,7 +50,8 @@ class ChatItem extends StatelessWidget {
   Widget build(BuildContext context) {
     bool isPic = item.msgType == MsgType.EN_MSG_TYPE_PIC.value; // 图片
     bool isRevoke = item.msgType == MsgType.EN_MSG_TYPE_DRAW_BACK.value; // 撤回消息
-    bool isSystem = item.msgType == MsgType.EN_MSG_TYPE_VIDEO_CARD.value ||
+    bool isSystem =
+        item.msgType == MsgType.EN_MSG_TYPE_VIDEO_CARD.value ||
         item.msgType == MsgType.EN_MSG_TYPE_TIP_MESSAGE.value ||
         item.msgType == MsgType.EN_MSG_TYPE_NOTIFY_MSG.value ||
         item.msgType == MsgType.EN_MSG_TYPE_PICTURE_CARD.value ||
@@ -138,17 +137,18 @@ class ChatItem extends StatelessWidget {
                                   Divider(
                                     height: 10,
                                     thickness: 1,
-                                    color: theme.colorScheme.outline
-                                        .withValues(alpha: 0.2),
+                                    color: theme.colorScheme.outline.withValues(
+                                      alpha: 0.2,
+                                    ),
                                   ),
                                   Text(
                                     '此条消息为自动回复',
-                                    style:
-                                        theme.textTheme.labelMedium!.copyWith(
-                                      color: theme.colorScheme.outline,
-                                    ),
+                                    style: theme.textTheme.labelMedium!
+                                        .copyWith(
+                                          color: theme.colorScheme.outline,
+                                        ),
                                   ),
-                                ]
+                                ],
                               ],
                             ),
                           ),
@@ -176,7 +176,7 @@ class ChatItem extends StatelessWidget {
         case MsgType.EN_MSG_TYPE_TEXT:
           return msgTypeText_1(theme, content: content, textColor: textColor);
         case MsgType.EN_MSG_TYPE_PIC:
-          return msgTypePic_2(context, content);
+          return msgTypePic_2(content);
         case MsgType.EN_MSG_TYPE_SHARE_V2:
           return msgTypeShareV2_7(content, textColor);
         case MsgType.EN_MSG_TYPE_VIDEO_CARD:
@@ -202,7 +202,13 @@ class ChatItem extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           GestureDetector(
-            onTap: () => Get.toNamed('/liveRoom?roomid=${content['sourceID']}'),
+            onTap: () {
+              var roomId = content['sourceID'];
+              if (roomId is String) {
+                roomId = int.parse(roomId);
+              }
+              PageUtils.toLiveRoom(roomId);
+            },
             child: NetworkImgLayer(
               width: 220,
               height: 220 * 9 / 16,
@@ -313,8 +319,9 @@ class ChatItem extends StatelessWidget {
             for (var i in content['sub_cards'])
               GestureDetector(
                 onTap: () async {
-                  String? bvid =
-                      IdUtils.bvRegex.firstMatch(i['jump_url'])?.group(0);
+                  String? bvid = IdUtils.bvRegex
+                      .firstMatch(i['jump_url'])
+                      ?.group(0);
                   if (bvid != null) {
                     try {
                       SmartDialog.showLoading();
@@ -322,11 +329,9 @@ class ChatItem extends StatelessWidget {
                       SmartDialog.dismiss();
                       if (cid != null) {
                         PageUtils.toVideoPage(
-                          'bvid=$bvid&cid=$cid',
-                          arguments: <String, String?>{
-                            'pic': i['cover_url'],
-                            'heroTag': Utils.makeHeroTag(bvid),
-                          },
+                          bvid: bvid,
+                          cid: cid,
+                          cover: i['cover_url'],
                         );
                       }
                     } catch (err) {
@@ -411,11 +416,9 @@ class ChatItem extends StatelessWidget {
                   SmartDialog.dismiss();
                   if (cid != null) {
                     PageUtils.toVideoPage(
-                      'bvid=$bvid&cid=$cid',
-                      arguments: {
-                        'pic': content['thumb'],
-                        'heroTag': Utils.makeHeroTag(bvid),
-                      },
+                      bvid: bvid,
+                      cid: cid,
+                      cover: content['cover'],
                     );
                   }
                 } catch (err) {
@@ -442,12 +445,14 @@ class ChatItem extends StatelessWidget {
                         text: content['times'] == 0
                             ? '--:--'
                             : DurationUtil.formatDuration(content['times']),
-                      )
+                      ),
                     ],
                   ),
                   Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     child: Text(
                       content['times'] == 0 ? '内容已失效' : content['title'],
                       style: TextStyle(
@@ -495,11 +500,10 @@ class ChatItem extends StatelessWidget {
           SmartDialog.dismiss();
           if (cid != null) {
             PageUtils.toVideoPage(
-              'bvid=$bvid&cid=$cid',
-              arguments: <String, String?>{
-                'pic': content['thumb'],
-                'heroTag': Utils.makeHeroTag(bvid),
-              },
+              aid: aid,
+              bvid: bvid,
+              cid: cid,
+              cover: content['thumb'],
             );
           }
         };
@@ -509,12 +513,12 @@ class ChatItem extends StatelessWidget {
       case 6:
         type = '专栏';
         onTap = () => Get.toNamed(
-              '/articlePage',
-              parameters: {
-                'id': '${content['id']}',
-                'type': 'read',
-              },
-            );
+          '/articlePage',
+          parameters: {
+            'id': '${content['id']}',
+            'type': 'read',
+          },
+        );
         break;
 
       // dynamic
@@ -530,7 +534,8 @@ class ChatItem extends StatelessWidget {
 
       default:
         onTap = () => SmartDialog.showToast(
-            'unsupported source type: ${content['source']}');
+          'unsupported source type: ${content['source']}',
+        );
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -582,10 +587,10 @@ class ChatItem extends StatelessWidget {
     );
   }
 
-  Widget msgTypePic_2(BuildContext context, content) {
+  Widget msgTypePic_2(content) {
     final url = content['url'];
     return GestureDetector(
-      onTap: () => context.imageView(imgList: [SourceModel(url: url)]),
+      onTap: () => PageUtils.imageView(imgList: [SourceModel(url: url)]),
       child: Hero(
         tag: url,
         child: NetworkImgLayer(
@@ -698,15 +703,21 @@ class ChatItem extends StatelessWidget {
               Text.rich(
                 TextSpan(
                   children: modules!.indexed
-                      .map((e) => TextSpan(children: [
+                      .map(
+                        (e) => TextSpan(
+                          children: [
                             TextSpan(
-                                text: e.$2['title'],
-                                style: TextStyle(
-                                    color: theme.colorScheme.outline)),
+                              text: e.$2['title'],
+                              style: TextStyle(
+                                color: theme.colorScheme.outline,
+                              ),
+                            ),
                             TextSpan(text: '    ${e.$2['detail']}'),
                             if (e.$1 != modules.length - 1)
                               const TextSpan(text: '\n'),
-                          ]))
+                          ],
+                        ),
+                      )
                       .toList(),
                 ),
               ),

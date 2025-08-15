@@ -9,7 +9,6 @@ import 'package:PiliPlus/utils/app_scheme.dart';
 import 'package:PiliPlus/utils/duration_util.dart';
 import 'package:PiliPlus/utils/id_utils.dart';
 import 'package:PiliPlus/utils/page_utils.dart';
-import 'package:PiliPlus/utils/utils.dart';
 import 'package:flutter/material.dart';
 
 // 视频卡片 - 垂直布局
@@ -21,7 +20,7 @@ class VideoCardVMemberHome extends StatelessWidget {
     required this.videoItem,
   });
 
-  Future<void> onPushDetail(String heroTag) async {
+  Future<void> onPushDetail() async {
     String? goto = videoItem.goto;
     switch (goto) {
       case 'bangumi':
@@ -46,11 +45,10 @@ class VideoCardVMemberHome extends StatelessWidget {
         int? cid = videoItem.cid ?? await SearchHttp.ab2c(aid: aid, bvid: bvid);
         if (cid != null) {
           PageUtils.toVideoPage(
-            'bvid=$bvid&cid=$cid',
-            arguments: {
-              'pic': videoItem.cover,
-              'heroTag': heroTag,
-            },
+            bvid: bvid,
+            cid: cid,
+            cover: videoItem.cover,
+            title: videoItem.title,
           );
         }
         break;
@@ -67,7 +65,7 @@ class VideoCardVMemberHome extends StatelessWidget {
     return Card(
       clipBehavior: Clip.hardEdge,
       child: InkWell(
-        onTap: () => onPushDetail(Utils.makeHeroTag(videoItem.bvid)),
+        onTap: onPushDetail,
         onLongPress: () => imageSaveDialog(
           title: videoItem.title,
           cover: videoItem.cover,
@@ -99,13 +97,36 @@ class VideoCardVMemberHome extends StatelessWidget {
                           size: PBadgeSize.small,
                           type: PBadgeType.gray,
                           text: DurationUtil.formatDuration(videoItem.duration),
+                        ),
+                      if (videoItem.badges?.isNotEmpty == true)
+                        PBadge(
+                          text: videoItem.badges!
+                              .map((e) => e.text ?? '')
+                              .join('|'),
+                          top: 6,
+                          right: 6,
+                          type: videoItem.badges!.first.text == '充电专属'
+                              ? PBadgeType.error
+                              : PBadgeType.primary,
                         )
+                      else if (videoItem.isCooperation == true)
+                        const PBadge(
+                          text: '合作',
+                          top: 6,
+                          right: 6,
+                        )
+                      else if (videoItem.isSteins == true)
+                        const PBadge(
+                          text: '互动',
+                          top: 6,
+                          right: 6,
+                        ),
                     ],
                   );
                 },
               ),
             ),
-            content(context)
+            content(context),
           ],
         ),
       ),

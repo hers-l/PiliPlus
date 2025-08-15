@@ -3,7 +3,6 @@ import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
 import 'package:PiliPlus/common/widgets/refresh_indicator.dart';
 import 'package:PiliPlus/http/loading_state.dart';
 import 'package:PiliPlus/models_new/space/space_fav/data.dart';
-import 'package:PiliPlus/models_new/space/space_fav/list.dart';
 import 'package:PiliPlus/pages/member_favorite/controller.dart';
 import 'package:PiliPlus/pages/member_favorite/widget/item.dart';
 import 'package:PiliPlus/utils/grid.dart';
@@ -45,9 +44,11 @@ class _MemberFavoriteState extends State<MemberFavorite>
         slivers: [
           SliverPadding(
             padding: EdgeInsets.only(
-                bottom: MediaQuery.paddingOf(context).bottom + 80),
-            sliver:
-                Obx(() => _buildBody(theme, _controller.loadingState.value)),
+              bottom: MediaQuery.paddingOf(context).bottom + 80,
+            ),
+            sliver: Obx(
+              () => _buildBody(theme, _controller.loadingState.value),
+            ),
           ),
         ],
       ),
@@ -57,37 +58,40 @@ class _MemberFavoriteState extends State<MemberFavorite>
   Widget _buildBody(ThemeData theme, LoadingState loadingState) {
     return switch (loadingState) {
       Loading() => SliverPadding(
-          padding: const EdgeInsets.only(top: 7),
-          sliver: SliverGrid(
-            gridDelegate: Grid.videoCardHDelegate(context),
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                return const VideoCardHSkeleton();
-              },
-              childCount: 10,
-            ),
+        padding: const EdgeInsets.only(top: 7),
+        sliver: SliverGrid(
+          gridDelegate: Grid.videoCardHDelegate(context),
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              return const VideoCardHSkeleton();
+            },
+            childCount: 10,
           ),
         ),
-      Success(:var response) => (response as List?)?.isNotEmpty == true
-          ? SliverMainAxisGroup(
-              slivers: [
-                SliverToBoxAdapter(
-                  child: Obx(
-                      () => _buildItem(theme, _controller.first.value, true)),
-                ),
-                SliverToBoxAdapter(
-                  child: Obx(
-                      () => _buildItem(theme, _controller.second.value, false)),
-                ),
-              ],
-            )
-          : HttpError(
-              onReload: _controller.onReload,
-            ),
+      ),
+      Success(:var response) =>
+        (response as List?)?.isNotEmpty == true
+            ? SliverMainAxisGroup(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Obx(
+                      () => _buildItem(theme, _controller.first.value, true),
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                    child: Obx(
+                      () => _buildItem(theme, _controller.second.value, false),
+                    ),
+                  ),
+                ],
+              )
+            : HttpError(
+                onReload: _controller.onReload,
+              ),
       Error(:var errMsg) => HttpError(
-          errMsg: errMsg,
-          onReload: _controller.onReload,
-        ),
+        errMsg: errMsg,
+        onReload: _controller.onReload,
+      ),
     };
   }
 
@@ -118,7 +122,7 @@ class _MemberFavoriteState extends State<MemberFavorite>
         ),
         controlAffinity: ListTileControlAffinity.leading,
         children: [
-          ...(data.mediaListResponse?.list as List<SpaceFavItemModel>).map(
+          ...?data.mediaListResponse?.list?.map(
             (item) => SizedBox(
               height: 98,
               child: MemberFavItem(
@@ -134,7 +138,8 @@ class _MemberFavoriteState extends State<MemberFavorite>
             ),
           ),
           Obx(
-            () => (isFirst
+            () =>
+                (isFirst
                     ? _controller.firstEnd.value
                     : _controller.secondEnd.value)
                 ? const SizedBox.shrink()

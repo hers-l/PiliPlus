@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:PiliPlus/http/api.dart';
 import 'package:PiliPlus/http/init.dart';
 import 'package:PiliPlus/http/loading_state.dart';
-import 'package:PiliPlus/models/common/search_type.dart';
+import 'package:PiliPlus/models/common/search/search_type.dart';
 import 'package:PiliPlus/models/search/result.dart';
 import 'package:PiliPlus/models/search/suggest.dart';
 import 'package:PiliPlus/models_new/dynamic/dyn_topic_pub_search/data.dart';
@@ -59,13 +59,13 @@ class SearchHttp {
       'keyword': keyword,
       'page': page,
       if (order?.isNotEmpty == true) 'order': order,
-      if (duration != null) 'duration': duration,
-      if (tids != null) 'tids': tids,
-      if (orderSort != null) 'order_sort': orderSort,
-      if (userType != null) 'user_type': userType,
-      if (categoryId != null) 'category_id': categoryId,
-      if (pubBegin != null) 'pubtime_begin_s': pubBegin,
-      if (pubEnd != null) 'pubtime_end_s': pubEnd,
+      'duration': ?duration,
+      'tids': ?tids,
+      'order_sort': ?orderSort,
+      'user_type': ?userType,
+      'category_id': ?categoryId,
+      'pubtime_begin_s': ?pubBegin,
+      'pubtime_end_s': ?pubEnd,
     };
     var res = await Request().get(
       Api.searchByType,
@@ -99,6 +99,8 @@ class SearchHttp {
           case SearchType.article:
             data = SearchArticleData.fromJson(res.data['data']);
             break;
+          // default:
+          //   break;
         }
         return Success(data);
       } catch (err) {
@@ -126,13 +128,13 @@ class SearchHttp {
       'keyword': keyword,
       'page': page,
       if (order?.isNotEmpty == true) 'order': order,
-      if (duration != null) 'duration': duration,
-      if (tids != null) 'tids': tids,
-      if (orderSort != null) 'order_sort': orderSort,
-      if (userType != null) 'user_type': userType,
-      if (categoryId != null) 'category_id': categoryId,
-      if (pubBegin != null) 'pubtime_begin_s': pubBegin,
-      if (pubEnd != null) 'pubtime_end_s': pubEnd,
+      'duration': ?duration,
+      'tids': ?tids,
+      'order_sort': ?orderSort,
+      'user_type': ?userType,
+      'category_id': ?categoryId,
+      'pubtime_begin_s': ?pubBegin,
+      'pubtime_end_s': ?pubEnd,
     };
     var res = await Request().get(
       Api.searchAll,
@@ -157,8 +159,8 @@ class SearchHttp {
     var res = await Request().get(
       Api.ab2c,
       queryParameters: {
-        if (aid != null) 'aid': aid,
-        if (bvid != null) 'bvid': bvid,
+        'aid': ?aid,
+        'bvid': ?bvid,
       },
     );
     if (res.data['code'] == 0) {
@@ -175,13 +177,15 @@ class SearchHttp {
     }
   }
 
-  static Future<LoadingState<PgcInfoModel>> pgcInfoNew(
-      {int? seasonId, int? epId}) async {
+  static Future<LoadingState<PgcInfoModel>> pgcInfo({
+    dynamic seasonId,
+    dynamic epId,
+  }) async {
     var res = await Request().get(
       Api.pgcInfo,
       queryParameters: {
-        if (seasonId != null) 'season_id': seasonId,
-        if (epId != null) 'ep_id': epId,
+        'season_id': ?seasonId,
+        'ep_id': ?epId,
       },
     );
     if (res.data['code'] == 0) {
@@ -191,11 +195,29 @@ class SearchHttp {
     }
   }
 
-  static Future<LoadingState> episodeInfo({int? epId}) async {
+  static Future<LoadingState<PgcInfoModel>> pugvInfo({
+    dynamic seasonId,
+    dynamic epId,
+  }) async {
+    var res = await Request().get(
+      Api.pugvInfo,
+      queryParameters: {
+        'season_id': ?seasonId,
+        'ep_id': ?epId,
+      },
+    );
+    if (res.data['code'] == 0) {
+      return Success(PgcInfoModel.fromJson(res.data['data']));
+    } else {
+      return Error(res.data['message']);
+    }
+  }
+
+  static Future<LoadingState> episodeInfo({dynamic epId}) async {
     var res = await Request().get(
       Api.episodeInfo,
       queryParameters: {
-        if (epId != null) 'ep_id': epId,
+        'ep_id': ?epId,
       },
     );
     if (res.data['code'] == 0) {
@@ -205,29 +227,9 @@ class SearchHttp {
     }
   }
 
-  static Future<Map<String, dynamic>> pgcInfo({
-    dynamic seasonId,
-    dynamic epId,
+  static Future<LoadingState<SearchTrendingData>> searchTrending({
+    int limit = 30,
   }) async {
-    var res = await Request().get(
-      Api.pgcInfo,
-      queryParameters: {
-        if (seasonId != null) 'season_id': seasonId,
-        if (epId != null) 'ep_id': epId,
-      },
-    );
-    if (res.data['code'] == 0) {
-      return {
-        'status': true,
-        'data': PgcInfoModel.fromJson(res.data['result']),
-      };
-    } else {
-      return {'status': false, 'msg': res.data['message']};
-    }
-  }
-
-  static Future<LoadingState<SearchTrendingData>> searchTrending(
-      {int limit = 30}) async {
     final res = await Request().get(
       Api.searchTrending,
       queryParameters: {
@@ -245,11 +247,14 @@ class SearchHttp {
     final res = await Request().get(
       Api.searchRecommend,
       queryParameters: {
-        'build': '8430300',
+        'build': 8430300,
+        'channel': 'master',
+        'version': '8.43.0',
         'c_locale': 'zh_CN',
         'mobi_app': 'android',
         'platform': 'android',
         's_locale': 'zh_CN',
+        'from': 2,
       },
     );
     if (res.data['code'] == 0) {

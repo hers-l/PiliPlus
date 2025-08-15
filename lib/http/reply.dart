@@ -12,8 +12,10 @@ import 'package:PiliPlus/utils/accounts/account.dart';
 import 'package:dio/dio.dart';
 
 class ReplyHttp {
-  static final Options _options =
-      Options(extra: {'account': AnonymousAccount(), 'checkReply': true});
+  static final Options options = Options(
+    headers: {...Constants.baseHeaders, 'cookie': ''},
+    extra: {'account': NoAccount()},
+  );
 
   static Future<LoadingState> replyList({
     required bool isLogin,
@@ -35,7 +37,7 @@ class ReplyHttp {
                   '{"offset":"${nextOffset.replaceAll('"', '\\"')}"}',
               'mode': sort + 2, //2:按时间排序；3：按热度排序
             },
-            options: !isLogin ? _options : null,
+            options: !isLogin ? options : null,
           )
         : await Request().get(
             Api.replyList,
@@ -46,7 +48,7 @@ class ReplyHttp {
               'pn': page,
               'ps': 20,
             },
-            options: !isLogin ? _options : null,
+            options: !isLogin ? options : null,
           );
     if (res.data['code'] == 0) {
       ReplyData replyData = ReplyData.fromJson(res.data['data']);
@@ -154,7 +156,7 @@ class ReplyHttp {
         'sort': 1,
         if (isLogin) 'csrf': Accounts.main.csrf,
       },
-      options: !isLogin ? _options : null,
+      options: !isLogin ? options : null,
     );
     if (res.data['code'] == 0) {
       ReplyReplyData replyData = ReplyReplyData.fromJson(res.data['data']);
@@ -194,9 +196,7 @@ class ReplyHttp {
         'action': action,
         'csrf': Accounts.main.csrf,
       },
-      options: Options(
-        contentType: Headers.formUrlEncodedContentType,
-      ),
+      options: Options(contentType: Headers.formUrlEncodedContentType),
     );
     if (res.data['code'] == 0) {
       return {'status': true, 'data': res.data['data']};
@@ -214,13 +214,14 @@ class ReplyHttp {
   }) async {
     var res = await Request().post(
       Api.likeReply,
-      queryParameters: {
+      data: {
         'type': type,
         'oid': oid,
         'rpid': rpid,
         'action': action,
         'csrf': Accounts.main.csrf,
       },
+      options: Options(contentType: Headers.formUrlEncodedContentType),
     );
     if (res.data['code'] == 0) {
       return {'status': true, 'data': res.data['data']};
@@ -229,12 +230,16 @@ class ReplyHttp {
     }
   }
 
-  static Future<LoadingState<List<Package>?>> getEmoteList(
-      {String? business}) async {
-    var res = await Request().get(Api.myEmote, queryParameters: {
-      'business': business ?? 'reply',
-      'web_location': '333.1245',
-    });
+  static Future<LoadingState<List<Package>?>> getEmoteList({
+    String? business,
+  }) async {
+    var res = await Request().get(
+      Api.myEmote,
+      queryParameters: {
+        'business': business ?? 'reply',
+        'web_location': '333.1245',
+      },
+    );
     if (res.data['code'] == 0) {
       return Success(EmoteModelData.fromJson(res.data['data']).packages);
     } else {
@@ -257,9 +262,7 @@ class ReplyHttp {
         'action': isUpTop ? 0 : 1,
         'csrf': Accounts.main.csrf,
       },
-      options: Options(
-        contentType: Headers.formUrlEncodedContentType,
-      ),
+      options: Options(contentType: Headers.formUrlEncodedContentType),
     );
     if (res.data['code'] == 0) {
       return {'status': true};

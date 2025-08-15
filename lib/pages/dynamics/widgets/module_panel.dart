@@ -27,6 +27,7 @@ Widget module(
   bool isDetail,
   Function(List<String>, int)? callback, {
   floor = 1,
+  required double maxWidth,
 }) {
   switch (item.type) {
     // 图文
@@ -38,8 +39,16 @@ Widget module(
     // 视频
     case 'DYNAMIC_TYPE_AV':
       return videoSeasonWidget(
-          theme, isSave, isDetail, item, context, 'archive', callback,
-          floor: floor);
+        theme,
+        isSave,
+        isDetail,
+        item,
+        context,
+        'archive',
+        callback,
+        floor: floor,
+        maxWidth: maxWidth,
+      );
     // 转发
     case 'DYNAMIC_TYPE_FORWARD':
       final orig = item.orig!;
@@ -71,6 +80,7 @@ Widget module(
           return const SizedBox.shrink();
         }
       }
+      maxWidth -= 30;
       return InkWell(
         onTap: () => PageUtils.pushDynDetail(orig, floor + 1),
         onLongPress: () {
@@ -121,7 +131,8 @@ Widget module(
                   GestureDetector(
                     onTap: isNormalAuth
                         ? () => Get.toNamed(
-                            '/member?mid=${orig.modules.moduleAuthor!.mid}')
+                            '/member?mid=${orig.modules.moduleAuthor!.mid}',
+                          )
                         : null,
                     child: Text(
                       '${isNormalAuth ? '@' : ''}${orig.modules.moduleAuthor!.name}',
@@ -131,52 +142,106 @@ Widget module(
                   const SizedBox(width: 6),
                   Text(
                     isSave
-                        ? DateUtil.format(orig.modules.moduleAuthor!.pubTs,
-                            format: DateUtil.longFormatDs)
+                        ? DateUtil.format(
+                            orig.modules.moduleAuthor!.pubTs,
+                            format: DateUtil.longFormatDs,
+                          )
                         : DateUtil.dateFormat(orig.modules.moduleAuthor!.pubTs),
                     style: TextStyle(
-                        color: theme.colorScheme.outline,
-                        fontSize: theme.textTheme.labelSmall!.fontSize),
+                      color: theme.colorScheme.outline,
+                      fontSize: theme.textTheme.labelSmall!.fontSize,
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 5),
-              content(theme, isSave, context, orig, isDetail, callback,
-                  floor: floor + 1),
-              module(theme, isSave, orig, context, isDetail, callback,
-                  floor: floor + 1),
+              content(
+                theme,
+                isSave,
+                context,
+                orig,
+                isDetail,
+                callback,
+                floor: floor + 1,
+                maxWidth: maxWidth,
+              ),
+              module(
+                theme,
+                isSave,
+                orig,
+                context,
+                isDetail,
+                callback,
+                floor: floor + 1,
+                maxWidth: maxWidth,
+              ),
               if (orig.modules.moduleDynamic?.additional != null)
                 addWidget(theme, orig, context, floor: floor + 1),
               if (orig.modules.moduleDynamic?.major?.blocked != null)
-                blockedItem(theme, orig.modules.moduleDynamic!.major!.blocked!),
+                blockedItem(
+                  theme,
+                  orig.modules.moduleDynamic!.major!.blocked!,
+                  maxWidth: maxWidth,
+                ),
             ],
           ),
         ),
       );
     // 直播
     case 'DYNAMIC_TYPE_LIVE_RCMD':
-      return liveRcmdPanel(theme, isDetail, item, context, floor: floor);
+      return liveRcmdPanel(
+        theme,
+        isDetail,
+        item,
+        context,
+        floor: floor,
+        maxWidth: maxWidth,
+      );
     // 直播
     case 'DYNAMIC_TYPE_LIVE':
       return livePanel(theme, isDetail, item, context, floor: floor);
     // 合集
     case 'DYNAMIC_TYPE_UGC_SEASON':
       return videoSeasonWidget(
-          theme, isSave, isDetail, item, context, 'ugcSeason', callback);
+        theme,
+        isSave,
+        isDetail,
+        item,
+        context,
+        'ugcSeason',
+        callback,
+        maxWidth: maxWidth,
+      );
     case 'DYNAMIC_TYPE_PGC':
       return videoSeasonWidget(
-          theme, isSave, isDetail, item, context, 'pgc', callback,
-          floor: floor);
+        theme,
+        isSave,
+        isDetail,
+        item,
+        context,
+        'pgc',
+        callback,
+        floor: floor,
+        maxWidth: maxWidth,
+      );
     case 'DYNAMIC_TYPE_PGC_UNION':
       return videoSeasonWidget(
-          theme, isSave, isDetail, item, context, 'pgc', callback,
-          floor: floor);
+        theme,
+        isSave,
+        isDetail,
+        item,
+        context,
+        'pgc',
+        callback,
+        floor: floor,
+        maxWidth: maxWidth,
+      );
     case 'DYNAMIC_TYPE_NONE':
       return Row(
         spacing: 4,
         children: [
           const Icon(FontAwesomeIcons.ghost, size: 14),
-          Text(item.modules.moduleDynamic!.major!.none!.tips!)
+          Text(item.modules.moduleDynamic!.major!.none!.tips!),
         ],
       );
     // 课堂
@@ -214,12 +279,21 @@ Widget module(
             } catch (_) {}
           },
           child: Padding(
-            padding:
-                const EdgeInsets.only(left: 12, top: 10, right: 12, bottom: 10),
+            padding: const EdgeInsets.only(
+              left: 12,
+              top: 10,
+              right: 12,
+              bottom: 10,
+            ),
             child: Row(
               spacing: 10,
               children: [
-                if (item.modules.moduleDynamic!.major!.common!.cover
+                if (item
+                        .modules
+                        .moduleDynamic!
+                        .major!
+                        .common!
+                        .cover
                         ?.isNotEmpty ==
                     true)
                   ClipRRect(
@@ -228,8 +302,13 @@ Widget module(
                       width: 45,
                       height: 45,
                       fit: BoxFit.cover,
-                      imageUrl: item.modules.moduleDynamic!.major!.common!
-                          .cover!.http2https,
+                      imageUrl: item
+                          .modules
+                          .moduleDynamic!
+                          .major!
+                          .common!
+                          .cover!
+                          .http2https,
                     ),
                   ),
                 Expanded(
@@ -243,7 +322,12 @@ Widget module(
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      if (item.modules.moduleDynamic!.major!.common!.desc
+                      if (item
+                              .modules
+                              .moduleDynamic!
+                              .major!
+                              .common!
+                              .desc
                               ?.isNotEmpty ==
                           true)
                         Text(
@@ -269,8 +353,12 @@ Widget module(
         onTap: () => PageUtils.handleWebview("https:${music['jump_url']}"),
         child: Container(
           width: double.infinity,
-          padding:
-              const EdgeInsets.only(left: 12, top: 10, right: 12, bottom: 10),
+          padding: const EdgeInsets.only(
+            left: 12,
+            top: 10,
+            right: 12,
+            bottom: 10,
+          ),
           color: theme.dividerColor.withValues(alpha: 0.08),
           child: Row(
             children: [
@@ -303,7 +391,7 @@ Widget module(
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
-              )
+              ),
             ],
           ),
         ),
@@ -331,7 +419,7 @@ Widget module(
                   top: 6,
                   text:
                       item.modules.moduleDynamic!.major!.medialist!.badge?.text,
-                )
+                ),
               ],
             ),
             const SizedBox(width: 14),
@@ -347,8 +435,9 @@ Widget module(
                   Text(
                     item.modules.moduleDynamic!.major!.medialist!.title!,
                     style: TextStyle(
-                        fontSize: theme.textTheme.titleMedium!.fontSize,
-                        fontWeight: FontWeight.bold),
+                      fontSize: theme.textTheme.titleMedium!.fontSize,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   if (item.modules.moduleDynamic?.major?.medialist?.subTitle !=
                       null) ...[
@@ -356,8 +445,9 @@ Widget module(
                     Text(
                       item.modules.moduleDynamic!.major!.medialist!.subTitle!,
                       style: TextStyle(
-                          fontSize: theme.textTheme.labelLarge!.fontSize,
-                          color: theme.colorScheme.outline),
+                        fontSize: theme.textTheme.labelLarge!.fontSize,
+                        color: theme.colorScheme.outline,
+                      ),
                     ),
                   ],
                 ],
@@ -371,7 +461,14 @@ Widget module(
     case 'DYNAMIC_TYPE_SUBSCRIPTION_NEW'
         when item.modules.moduleDynamic?.major?.type ==
             'MAJOR_TYPE_SUBSCRIPTION_NEW':
-      return livePanelSub(theme, isDetail, item, context, floor: floor);
+      return livePanelSub(
+        theme,
+        isDetail,
+        item,
+        context,
+        floor: floor,
+        maxWidth: maxWidth,
+      );
 
     default:
       return Padding(

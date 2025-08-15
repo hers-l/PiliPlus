@@ -1,24 +1,87 @@
+import 'package:PiliPlus/common/widgets/dialog/dialog.dart';
 import 'package:PiliPlus/http/fav.dart';
 import 'package:PiliPlus/http/loading_state.dart';
+import 'package:PiliPlus/models/common/fav_order_type.dart';
+import 'package:PiliPlus/models/common/video/source_type.dart';
 import 'package:PiliPlus/models_new/fav/fav_detail/data.dart';
 import 'package:PiliPlus/models_new/fav/fav_detail/media.dart';
 import 'package:PiliPlus/models_new/fav/fav_folder/list.dart';
-import 'package:PiliPlus/pages/common/multi_select_controller.dart';
+import 'package:PiliPlus/pages/common/common_list_controller.dart';
+import 'package:PiliPlus/pages/common/multi_select/base.dart';
+import 'package:PiliPlus/pages/common/multi_select/multi_select_controller.dart';
 import 'package:PiliPlus/pages/fav_sort/view.dart';
 import 'package:PiliPlus/services/account_service.dart';
 import 'package:PiliPlus/utils/extension.dart';
 import 'package:PiliPlus/utils/page_utils.dart';
-import 'package:PiliPlus/utils/utils.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show ValueChanged;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 
+mixin BaseFavController
+    on
+        CommonListController<FavDetailData, FavDetailItemModel>,
+        DeleteItemMixin<FavDetailData, FavDetailItemModel> {
+  bool get isOwner;
+  int get mediaId;
+
+  ValueChanged<int>? updateCount;
+
+  void onViewFav(FavDetailItemModel item, int? index);
+
+  Future<void> onCancelFav(int index, int id, int type) async {
+    var result = await FavHttp.favVideo(
+      resources: '$id:$type',
+      delIds: mediaId.toString(),
+    );
+    if (result['status']) {
+      loadingState
+        ..value.data!.removeAt(index)
+        ..refresh();
+      updateCount?.call(1);
+      SmartDialog.showToast('取消收藏');
+    } else {
+      SmartDialog.showToast(result['msg']);
+    }
+  }
+
+  @override
+  void onRemove() {
+    showConfirmDialog(
+      context: Get.context!,
+      content: '确认删除所选收藏吗？',
+      title: '提示',
+      onConfirm: () async {
+        final removeList = allChecked.toSet();
+        var result = await FavHttp.favVideo(
+          resources: removeList
+              .map((item) => '${item.id}:${item.type}')
+              .join(','),
+          delIds: mediaId.toString(),
+        );
+        if (result['status']) {
+          updateCount?.call(removeList.length);
+          afterDelete(removeList);
+          SmartDialog.showToast('取消收藏');
+        } else {
+          SmartDialog.showToast(result['msg']);
+        }
+      },
+    );
+  }
+}
+
 class FavDetailController
-    extends MultiSelectController<FavDetailData, FavDetailItemModel> {
+    extends MultiSelectController<FavDetailData, FavDetailItemModel>
+    with BaseFavController {
+  @override
   late int mediaId;
   late String heroTag;
   final Rx<FavFolderInfo> folderInfo = FavFolderInfo().obs;
-  final Rx<bool?> isOwner = Rx<bool?>(null);
+  final Rx<bool?> _isOwner = Rx<bool?>(null);
+  final Rx<FavOrderType> order = FavOrderType.mtime.obs;
+
+  @override
+  bool get isOwner => _isOwner.value ?? false;
 
   AccountService accountService = Get.find<AccountService>();
 
@@ -55,28 +118,16 @@ class FavDetailController
     if (isRefresh) {
       FavDetailData data = response.response;
       folderInfo.value = data.info!;
-      isOwner.value = data.info?.mid == accountService.mid;
+      _isOwner.value = data.info?.mid == accountService.mid;
     }
     return false;
   }
 
-  Future<void> onCancelFav(int index, int id, int type) async {
-    var result = await FavHttp.delFav(
-      ids: ['$id:$type'],
-      delIds: mediaId.toString(),
-    );
-    if (result['status']) {
-      folderInfo
-        ..value.mediaCount -= 1
+  @override
+  ValueChanged<int>? get updateCount =>
+      (count) => folderInfo
+        ..value.mediaCount -= count
         ..refresh();
-      loadingState
-        ..value.data!.removeAt(index)
-        ..refresh();
-      SmartDialog.showToast('取消收藏');
-    } else {
-      SmartDialog.showToast(result['msg']);
-    }
-  }
 
   @override
   Future<LoadingState<FavDetailData>> customGetData() =>
@@ -84,61 +135,8 @@ class FavDetailController
         pn: page,
         ps: 20,
         mediaId: mediaId,
+        order: order.value,
       );
-
-  void onDelChecked(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('提示'),
-          content: const Text('确认删除所选收藏吗？'),
-          actions: [
-            TextButton(
-              onPressed: Get.back,
-              child: Text(
-                '取消',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.outline,
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () async {
-                Get.back();
-                List<FavDetailItemModel> list = loadingState.value.data!
-                    .where((e) => e.checked == true)
-                    .toList();
-                var result = await FavHttp.delFav(
-                  ids: list.map((item) => '${item.id}:${item.type}').toList(),
-                  delIds: mediaId.toString(),
-                );
-                if (result['status']) {
-                  List<FavDetailItemModel> dataList = loadingState.value.data!;
-                  List<FavDetailItemModel> remainList =
-                      dataList.toSet().difference(list.toSet()).toList();
-                  folderInfo
-                    ..value.mediaCount -= list.length
-                    ..refresh();
-                  if (remainList.isNotEmpty) {
-                    loadingState.value = Success(remainList);
-                  } else {
-                    onReload();
-                  }
-                  SmartDialog.showToast('取消收藏');
-                  checkedCount.value = 0;
-                  enableMultiSelect.value = false;
-                } else {
-                  SmartDialog.showToast(result['msg']);
-                }
-              },
-              child: const Text('确认'),
-            )
-          ],
-        );
-      },
-    );
-  }
 
   void toViewPlayAll() {
     if (loadingState.value.isSuccess) {
@@ -149,23 +147,7 @@ class FavDetailController
         if (element.ugc?.firstCid == null) {
           continue;
         } else {
-          if (element.bvid != list.first.bvid) {
-            SmartDialog.showToast('已跳过不支持播放的视频');
-          }
-          PageUtils.toVideoPage(
-            'bvid=${element.bvid}&cid=${element.ugc!.firstCid}',
-            arguments: {
-              'videoItem': element,
-              'heroTag': Utils.makeHeroTag(element.bvid),
-              'sourceType': 'fav',
-              'mediaId': folderInfo.value.id,
-              'oid': element.id,
-              'favTitle': folderInfo.value.title,
-              'count': folderInfo.value.mediaCount,
-              'desc': true,
-              'isOwner': isOwner.value ?? false,
-            },
-          );
+          onViewFav(element, null);
           break;
         }
       }
@@ -199,9 +181,7 @@ class FavDetailController
     var res = await FavHttp.cleanFav(mediaId: mediaId);
     if (res['status']) {
       SmartDialog.showToast('清除成功');
-      Future.delayed(const Duration(milliseconds: 200), () {
-        onReload();
-      });
+      Future.delayed(const Duration(milliseconds: 200), onReload);
     } else {
       SmartDialog.showToast(res['msg']);
     }
@@ -216,5 +196,26 @@ class FavDetailController
       }
       Get.to(FavSortPage(favDetailController: this));
     }
+  }
+
+  @override
+  void onViewFav(FavDetailItemModel item, int? index) {
+    final folder = folderInfo.value;
+    PageUtils.toVideoPage(
+      bvid: item.bvid,
+      cid: item.ugc!.firstCid!,
+      cover: item.cover,
+      title: item.title,
+      extraArguments: {
+        'sourceType': SourceType.fav,
+        'mediaId': folder.id,
+        'oid': item.id,
+        'favTitle': folder.title,
+        'count': folder.mediaCount,
+        'desc': true,
+        if (index != null) 'isContinuePlaying': index != 0,
+        'isOwner': isOwner,
+      },
+    );
   }
 }

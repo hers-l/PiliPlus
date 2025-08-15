@@ -3,6 +3,7 @@ import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
 import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
 import 'package:PiliPlus/common/widgets/refresh_indicator.dart';
 import 'package:PiliPlus/http/loading_state.dart';
+import 'package:PiliPlus/models_new/sub/sub/list.dart';
 import 'package:PiliPlus/models_new/sub/sub_detail/media.dart';
 import 'package:PiliPlus/pages/subscription_detail/controller.dart';
 import 'package:PiliPlus/pages/subscription_detail/widget/sub_video_card.dart';
@@ -17,6 +18,21 @@ class SubDetailPage extends StatefulWidget {
 
   @override
   State<SubDetailPage> createState() => _SubDetailPageState();
+
+  static void toSubDetailPage(
+    int id, {
+    String? heroTag,
+    SubItemModel? subInfo,
+  }) {
+    Get.toNamed(
+      '/subDetail',
+      arguments: {
+        'id': id,
+        'subInfo': subInfo,
+        'heroTag': heroTag,
+      },
+    );
+  }
 }
 
 class _SubDetailPageState extends State<SubDetailPage> {
@@ -28,6 +44,7 @@ class _SubDetailPageState extends State<SubDetailPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final padding = MediaQuery.paddingOf(context);
     return Scaffold(
       body: SafeArea(
         top: false,
@@ -38,14 +55,15 @@ class _SubDetailPageState extends State<SubDetailPage> {
             controller: _subDetailController.scrollController,
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
-              _buildAppBar(theme),
+              _appBar(theme, padding),
               SliverPadding(
                 padding: EdgeInsets.only(
                   top: 7,
-                  bottom: MediaQuery.paddingOf(context).bottom + 80,
+                  bottom: padding.bottom + 80,
                 ),
                 sliver: Obx(
-                    () => _buildBody(_subDetailController.loadingState.value)),
+                  () => _buildBody(_subDetailController.loadingState.value),
+                ),
               ),
             ],
           ),
@@ -57,42 +75,69 @@ class _SubDetailPageState extends State<SubDetailPage> {
   Widget _buildBody(LoadingState<List<SubDetailItemModel>?> loadingState) {
     return switch (loadingState) {
       Loading() => SliverGrid(
-          gridDelegate: Grid.videoCardHDelegate(context),
-          delegate: SliverChildBuilderDelegate(
-            (context, index) => const VideoCardHSkeleton(),
-            childCount: 10,
-          ),
+        gridDelegate: Grid.videoCardHDelegate(context),
+        delegate: SliverChildBuilderDelegate(
+          (context, index) => const VideoCardHSkeleton(),
+          childCount: 10,
         ),
-      Success(:var response) => response?.isNotEmpty == true
-          ? SliverGrid(
-              gridDelegate: Grid.videoCardHDelegate(context),
-              delegate: SliverChildBuilderDelegate(
-                childCount: response!.length,
-                (context, index) {
-                  if (index == response.length - 1) {
-                    _subDetailController.onLoadMore();
-                  }
-                  return SubVideoCardH(
-                    videoItem: response[index],
-                  );
-                },
+      ),
+      Success(:var response) =>
+        response?.isNotEmpty == true
+            ? SliverGrid(
+                gridDelegate: Grid.videoCardHDelegate(context),
+                delegate: SliverChildBuilderDelegate(
+                  childCount: response!.length,
+                  (context, index) {
+                    if (index == response.length - 1) {
+                      _subDetailController.onLoadMore();
+                    }
+                    return SubVideoCardH(
+                      videoItem: response[index],
+                    );
+                  },
+                ),
+              )
+            : HttpError(
+                onReload: _subDetailController.onReload,
               ),
-            )
-          : HttpError(
-              onReload: _subDetailController.onReload,
-            ),
       Error(:var errMsg) => HttpError(
-          errMsg: errMsg,
-          onReload: _subDetailController.onReload,
-        ),
+        errMsg: errMsg,
+        onReload: _subDetailController.onReload,
+      ),
     };
   }
 
-  Widget _buildAppBar(ThemeData theme) {
+  Widget _appBar(ThemeData theme, EdgeInsets padding) {
+    final info = _subDetailController.subInfo;
+    if (info != null) return _buildAppBar(theme, padding, info);
+    return Obx(() {
+      return switch (_subDetailController.loadingState.value) {
+        Loading() || Error() => const SliverAppBar(),
+        Success() => _buildAppBar(
+          theme,
+          padding,
+          _subDetailController.subInfo!,
+        ),
+      };
+    });
+  }
+
+  Widget _buildAppBar(ThemeData theme, EdgeInsets padding, SubItemModel info) {
     final style = TextStyle(
       fontSize: 12.5,
       color: theme.colorScheme.outline,
     );
+    Widget cover = NetworkImgLayer(
+      width: 176,
+      height: 110,
+      src: info.cover,
+    );
+    if (_subDetailController.heroTag != null) {
+      cover = Hero(
+        tag: _subDetailController.heroTag!,
+        child: cover,
+      );
+    }
     return SliverAppBar.medium(
       expandedHeight: kToolbarHeight + 132,
       pinned: true,
@@ -100,16 +145,14 @@ class _SubDetailPageState extends State<SubDetailPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            _subDetailController.subInfo.title!,
+            info.title!,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.titleMedium,
           ),
-          Obx(
-            () => Text(
-              '共${_subDetailController.mediaCount.value}条视频',
-              style: theme.textTheme.labelMedium,
-            ),
+          Text(
+            '共${info.mediaCount}条视频',
+            style: theme.textTheme.labelMedium,
           ),
         ],
       ),
@@ -123,7 +166,7 @@ class _SubDetailPageState extends State<SubDetailPage> {
             ),
           ),
           padding: EdgeInsets.only(
-            top: kToolbarHeight + MediaQuery.paddingOf(context).top + 10,
+            top: kToolbarHeight + padding.top + 10,
             left: 12,
             right: 12,
             bottom: 12,
@@ -132,21 +175,14 @@ class _SubDetailPageState extends State<SubDetailPage> {
             spacing: 12,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Hero(
-                tag: _subDetailController.heroTag,
-                child: NetworkImgLayer(
-                  width: 176,
-                  height: 110,
-                  src: _subDetailController.subInfo.cover,
-                ),
-              ),
+              cover,
               Expanded(
                 child: Column(
                   spacing: 4,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _subDetailController.subInfo.title!,
+                      info.title!,
                       style: TextStyle(
                         fontSize: theme.textTheme.titleMedium!.fontSize,
                         fontWeight: FontWeight.bold,
@@ -155,27 +191,19 @@ class _SubDetailPageState extends State<SubDetailPage> {
                     GestureDetector(
                       onTap: () {
                         Get.toNamed(
-                            '/member?mid=${_subDetailController.subInfo.upper!.mid}');
+                          '/member?mid=${info.upper!.mid}',
+                        );
                       },
                       child: Text(
-                        _subDetailController.subInfo.upper!.name!,
+                        info.upper!.name!,
                         style: TextStyle(color: theme.colorScheme.primary),
                       ),
                     ),
                     const Spacer(),
-                    Obx(
-                      () => _subDetailController.mediaCount.value == 0
-                          ? const SizedBox.shrink()
-                          : Text(
-                              '共${_subDetailController.mediaCount.value}条视频',
-                              style: style,
-                            ),
-                    ),
-                    Obx(
-                      () => Text(
-                        '${NumUtil.numFormat(_subDetailController.playCount.value)}次播放',
-                        style: style,
-                      ),
+                    Text('共${info.mediaCount}条视频', style: style),
+                    Text(
+                      '${NumUtil.numFormat(info.viewCount ?? info.cntInfo?.play)}次播放',
+                      style: style,
                     ),
                   ],
                 ),

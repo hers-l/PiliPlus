@@ -1,4 +1,3 @@
-import 'package:PiliPlus/common/constants.dart';
 import 'package:PiliPlus/common/skeleton/video_card_h.dart';
 import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
 import 'package:PiliPlus/common/widgets/refresh_indicator.dart';
@@ -44,7 +43,7 @@ class _ZonePageState extends CommonPageState<ZonePage, ZoneController>
         slivers: [
           SliverPadding(
             padding: EdgeInsets.only(
-              top: StyleString.safeSpace - 5,
+              top: 7,
               bottom: MediaQuery.paddingOf(context).bottom + 80,
             ),
             sliver: Obx(() => _buildBody(controller.loadingState.value)),
@@ -69,30 +68,31 @@ class _ZonePageState extends CommonPageState<ZonePage, ZoneController>
   Widget _buildBody(LoadingState<List<dynamic>?> loadingState) {
     return switch (loadingState) {
       Loading() => _buildSkeleton(),
-      Success(:var response) => response?.isNotEmpty == true
-          ? SliverGrid(
-              gridDelegate: Grid.videoCardHDelegate(context),
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final item = response[index];
-                  if (item is HotVideoItemModel) {
-                    return VideoCardH(
-                      videoItem: item,
-                      onRemove: () => controller.loadingState
-                        ..value.data!.removeAt(index)
-                        ..refresh(),
-                    );
-                  }
-                  return PgcRankItem(item: item);
-                },
-                childCount: response!.length,
-              ),
-            )
-          : HttpError(onReload: controller.onReload),
+      Success(:var response) =>
+        response?.isNotEmpty == true
+            ? SliverGrid(
+                gridDelegate: Grid.videoCardHDelegate(context),
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final item = response[index];
+                    if (item is HotVideoItemModel) {
+                      return VideoCardH(
+                        videoItem: item,
+                        onRemove: () => controller.loadingState
+                          ..value.data!.removeAt(index)
+                          ..refresh(),
+                      );
+                    }
+                    return PgcRankItem(item: item);
+                  },
+                  childCount: response!.length,
+                ),
+              )
+            : HttpError(onReload: controller.onReload),
       Error(:var errMsg) => HttpError(
-          errMsg: errMsg,
-          onReload: controller.onReload,
-        ),
+        errMsg: errMsg,
+        onReload: controller.onReload,
+      ),
     };
   }
 }

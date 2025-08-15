@@ -8,17 +8,19 @@ class HotKeyword extends StatelessWidget {
   final double width;
   final List<SearchTrendingItemModel> hotSearchList;
   final Function? onClick;
-  final bool showMore;
   const HotKeyword({
     super.key,
     required double width,
     required this.hotSearchList,
     this.onClick,
-    this.showMore = true,
   }) : width = width / 2 - 4;
 
   @override
   Widget build(BuildContext context) {
+    late final style = TextStyle(
+      fontSize: 14,
+      color: Theme.of(context).colorScheme.outline,
+    );
     return Wrap(
       runSpacing: 0.4,
       spacing: 5.0,
@@ -66,6 +68,8 @@ class HotKeyword extends StatelessWidget {
                               height: 15,
                             ),
                           )
+                        else if (i.recommendReason?.isNotEmpty == true)
+                          Text(i.recommendReason!, style: style),
                       ],
                     ),
                   ),

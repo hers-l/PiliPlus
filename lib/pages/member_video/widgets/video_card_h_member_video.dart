@@ -11,7 +11,6 @@ import 'package:PiliPlus/models_new/space/space_archive/item.dart';
 import 'package:PiliPlus/utils/date_util.dart';
 import 'package:PiliPlus/utils/duration_util.dart';
 import 'package:PiliPlus/utils/page_utils.dart';
-import 'package:PiliPlus/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 
@@ -43,7 +42,8 @@ class VideoCardHMemberVideo extends StatelessWidget {
               cover: videoItem.cover,
               bvid: videoItem.bvid,
             ),
-            onTap: onTap ??
+            onTap:
+                onTap ??
                 () async {
                   if (videoItem.isPgc == true &&
                       videoItem.uri?.isNotEmpty == true) {
@@ -56,10 +56,10 @@ class VideoCardHMemberVideo extends StatelessWidget {
                   }
                   try {
                     PageUtils.toVideoPage(
-                      'bvid=${videoItem.bvid}&cid=${videoItem.cid}',
-                      arguments: {
-                        'heroTag': Utils.makeHeroTag(videoItem.bvid),
-                      },
+                      bvid: videoItem.bvid,
+                      cid: videoItem.cid!,
+                      cover: videoItem.cover,
+                      title: videoItem.title,
                     );
                   } catch (err) {
                     SmartDialog.showToast(err.toString());
@@ -78,96 +78,113 @@ class VideoCardHMemberVideo extends StatelessWidget {
                       AspectRatio(
                         aspectRatio: StyleString.aspectRatio,
                         child: LayoutBuilder(
-                          builder: (BuildContext context,
-                              BoxConstraints boxConstraints) {
-                            final double maxWidth = boxConstraints.maxWidth;
-                            final double maxHeight = boxConstraints.maxHeight;
-                            return Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                NetworkImgLayer(
-                                  src: videoItem.cover,
-                                  width: maxWidth,
-                                  height: maxHeight,
-                                ),
-                                if (fromViewAid == videoItem.param)
-                                  const Positioned.fill(
-                                    child: DecoratedBox(
-                                      decoration: BoxDecoration(
-                                        borderRadius: StyleString.mdRadius,
-                                        color: Colors.black54,
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          '上次观看',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 15,
-                                            letterSpacing: 5,
+                          builder:
+                              (
+                                BuildContext context,
+                                BoxConstraints boxConstraints,
+                              ) {
+                                final double maxWidth = boxConstraints.maxWidth;
+                                final double maxHeight =
+                                    boxConstraints.maxHeight;
+                                return Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    NetworkImgLayer(
+                                      src: videoItem.cover,
+                                      width: maxWidth,
+                                      height: maxHeight,
+                                    ),
+                                    if (fromViewAid == videoItem.param)
+                                      const Positioned.fill(
+                                        child: DecoratedBox(
+                                          decoration: BoxDecoration(
+                                            borderRadius: StyleString.mdRadius,
+                                            color: Colors.black54,
+                                          ),
+                                          child: Center(
+                                            child: Text(
+                                              '上次观看',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 15,
+                                                letterSpacing: 5,
+                                              ),
+                                            ),
                                           ),
                                         ),
                                       ),
-                                    ),
-                                  ),
-                                if (videoItem.badges?.isNotEmpty == true)
-                                  PBadge(
-                                    text: videoItem.badges!
-                                        .map((item) => item.text)
-                                        .join('|'),
-                                    right: 6.0,
-                                    top: 6.0,
-                                    type: videoItem.badges!.first.text == '充电专属'
-                                        ? PBadgeType.error
-                                        : PBadgeType.primary,
-                                  ),
-                                if (videoItem.history != null) ...[
-                                  Builder(builder: (context) {
-                                    try {
-                                      return Positioned(
-                                        left: 0,
-                                        right: 0,
-                                        bottom: 0,
-                                        child: videoProgressIndicator(
-                                          videoItem.history!.progress! /
-                                              videoItem.history!.duration!,
-                                        ),
-                                      );
-                                    } catch (_) {
-                                      return const SizedBox.shrink();
-                                    }
-                                  }),
-                                  Builder(builder: (context) {
-                                    try {
-                                      return PBadge(
-                                        text: videoItem.history!.progress ==
-                                                videoItem.history!.duration
-                                            ? '已看完'
-                                            : '${DurationUtil.formatDuration(videoItem.history!.progress)}/${DurationUtil.formatDuration(videoItem.history!.duration)}',
+                                    if (videoItem.badges?.isNotEmpty == true)
+                                      PBadge(
+                                        text: videoItem.badges!
+                                            .map((item) => item.text)
+                                            .join('|'),
                                         right: 6.0,
-                                        bottom: 6.0,
-                                        type: PBadgeType.gray,
-                                      );
-                                    } catch (_) {
-                                      return PBadge(
+                                        top: 6.0,
+                                        type:
+                                            videoItem.badges!.first.text ==
+                                                '充电专属'
+                                            ? PBadgeType.error
+                                            : PBadgeType.primary,
+                                      ),
+                                    if (videoItem.history != null) ...[
+                                      Builder(
+                                        builder: (context) {
+                                          try {
+                                            return Positioned(
+                                              left: 0,
+                                              right: 0,
+                                              bottom: 0,
+                                              child: videoProgressIndicator(
+                                                videoItem.history!.progress! /
+                                                    videoItem
+                                                        .history!
+                                                        .duration!,
+                                              ),
+                                            );
+                                          } catch (_) {
+                                            return const SizedBox.shrink();
+                                          }
+                                        },
+                                      ),
+                                      Builder(
+                                        builder: (context) {
+                                          try {
+                                            return PBadge(
+                                              text:
+                                                  videoItem.history!.progress ==
+                                                      videoItem
+                                                          .history!
+                                                          .duration
+                                                  ? '已看完'
+                                                  : '${DurationUtil.formatDuration(videoItem.history!.progress)}/${DurationUtil.formatDuration(videoItem.history!.duration)}',
+                                              right: 6.0,
+                                              bottom: 6.0,
+                                              type: PBadgeType.gray,
+                                            );
+                                          } catch (_) {
+                                            return PBadge(
+                                              text: DurationUtil.formatDuration(
+                                                videoItem.duration,
+                                              ),
+                                              right: 6.0,
+                                              bottom: 6.0,
+                                              type: PBadgeType.gray,
+                                            );
+                                          }
+                                        },
+                                      ),
+                                    ] else if (videoItem.duration > 0)
+                                      PBadge(
                                         text: DurationUtil.formatDuration(
-                                            videoItem.duration),
+                                          videoItem.duration,
+                                        ),
                                         right: 6.0,
                                         bottom: 6.0,
                                         type: PBadgeType.gray,
-                                      );
-                                    }
-                                  }),
-                                ] else if (videoItem.duration > 0)
-                                  PBadge(
-                                    text: DurationUtil.formatDuration(
-                                        videoItem.duration),
-                                    right: 6.0,
-                                    bottom: 6.0,
-                                    type: PBadgeType.gray,
-                                  ),
-                              ],
-                            );
-                          },
+                                      ),
+                                  ],
+                                );
+                              },
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -193,7 +210,8 @@ class VideoCardHMemberVideo extends StatelessWidget {
   }
 
   Widget content(BuildContext context, ThemeData theme) {
-    final isCurr = fromViewAid == videoItem.param ||
+    final isCurr =
+        fromViewAid == videoItem.param ||
         (videoItem.bvid != null && videoItem.bvid == bvid);
     return Expanded(
       child: Column(

@@ -20,8 +20,9 @@ class _FavFolderSortPageState extends State<FavFolderSortPage> {
   FavController get _favController => widget.favController;
 
   final GlobalKey _key = GlobalKey();
-  late List<FavFolderInfo> sortList =
-      List<FavFolderInfo>.from(_favController.loadingState.value.data!);
+  late List<FavFolderInfo> sortList = List<FavFolderInfo>.from(
+    _favController.loadingState.value.data!,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +33,7 @@ class _FavFolderSortPageState extends State<FavFolderSortPage> {
           TextButton(
             onPressed: () async {
               var res = await FavHttp.sortFavFolder(
-                sort: sortList.map((item) => item.id).toList(),
+                sort: sortList.map((item) => item.id).join(','),
               );
               if (res['status']) {
                 SmartDialog.showToast('排序完成');
@@ -89,8 +90,9 @@ class _FavFolderSortPageState extends State<FavFolderSortPage> {
           child: FavVideoItem(
             heroTag: key,
             item: item,
-            onLongPress:
-                index == 0 ? () => SmartDialog.showToast('默认收藏夹不支持排序') : null,
+            onLongPress: index == 0
+                ? () => SmartDialog.showToast('默认收藏夹不支持排序')
+                : null,
           ),
         );
       },

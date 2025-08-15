@@ -7,6 +7,7 @@ import 'package:PiliPlus/models/common/image_type.dart';
 import 'package:PiliPlus/models_new/blacklist/list.dart';
 import 'package:PiliPlus/pages/blacklist/controller.dart';
 import 'package:PiliPlus/utils/date_util.dart';
+import 'package:PiliPlus/utils/global_data.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -24,9 +25,13 @@ class _BlackListPageState extends State<BlackListPage> {
   @override
   void dispose() {
     if (_blackListController.loadingState.value.isSuccess) {
-      Pref.blackMids = _blackListController.loadingState.value.data!
-          .map((e) => e.mid!)
-          .toSet();
+      final blackMids =
+          _blackListController.loadingState.value.data
+              ?.map((e) => e.mid!)
+              .toSet() ??
+          {};
+      GlobalData().blackMids = blackMids;
+      Pref.blackMids = blackMids;
     }
     super.dispose();
   }
@@ -37,7 +42,8 @@ class _BlackListPageState extends State<BlackListPage> {
       appBar: AppBar(
         title: Obx(
           () => Text(
-              '黑名单管理${_blackListController.total.value == -1 ? '' : ': ${_blackListController.total.value}'}'),
+            '黑名单管理${_blackListController.total.value == -1 ? '' : ': ${_blackListController.total.value}'}',
+          ),
         ),
       ),
       body: refreshIndicator(
@@ -48,10 +54,12 @@ class _BlackListPageState extends State<BlackListPage> {
           slivers: [
             SliverPadding(
               padding: EdgeInsets.only(
-                  bottom: MediaQuery.paddingOf(context).bottom + 80),
+                bottom: MediaQuery.paddingOf(context).bottom + 80,
+              ),
               sliver: Obx(
-                  () => _buildBody(_blackListController.loadingState.value)),
-            )
+                () => _buildBody(_blackListController.loadingState.value),
+              ),
+            ),
           ],
         ),
       ),
@@ -62,57 +70,58 @@ class _BlackListPageState extends State<BlackListPage> {
     late final style = TextStyle(color: Theme.of(context).colorScheme.outline);
     return switch (loadingState) {
       Loading() => SliverList.builder(
-          itemCount: 12,
-          itemBuilder: (context, index) {
-            return const MsgFeedTopSkeleton();
-          },
-        ),
-      Success(:var response) => response?.isNotEmpty == true
-          ? SliverList.builder(
-              itemCount: response!.length,
-              itemBuilder: (BuildContext context, int index) {
-                if (index == response.length - 1) {
-                  _blackListController.onLoadMore();
-                }
-                final item = response[index];
-                return ListTile(
-                  onTap: () => Get.toNamed('/member?mid=${item.mid}'),
-                  leading: NetworkImgLayer(
-                    width: 45,
-                    height: 45,
-                    type: ImageType.avatar,
-                    src: item.face,
-                  ),
-                  title: Text(
-                    item.uname!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 14),
-                  ),
-                  subtitle: Text(
-                    '添加时间: ${DateUtil.format(item.mtime, format: DateUtil.longFormatDs)}',
-                    maxLines: 1,
-                    style: style,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  dense: true,
-                  trailing: TextButton(
-                    onPressed: () => _blackListController.onRemove(
-                      context,
-                      index,
-                      item.uname,
-                      item.mid,
+        itemCount: 12,
+        itemBuilder: (context, index) {
+          return const MsgFeedTopSkeleton();
+        },
+      ),
+      Success(:var response) =>
+        response?.isNotEmpty == true
+            ? SliverList.builder(
+                itemCount: response!.length,
+                itemBuilder: (BuildContext context, int index) {
+                  if (index == response.length - 1) {
+                    _blackListController.onLoadMore();
+                  }
+                  final item = response[index];
+                  return ListTile(
+                    onTap: () => Get.toNamed('/member?mid=${item.mid}'),
+                    leading: NetworkImgLayer(
+                      width: 45,
+                      height: 45,
+                      type: ImageType.avatar,
+                      src: item.face,
                     ),
-                    child: const Text('移除'),
-                  ),
-                );
-              },
-            )
-          : HttpError(onReload: _blackListController.onReload),
+                    title: Text(
+                      item.uname!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                    subtitle: Text(
+                      '添加时间: ${DateUtil.format(item.mtime, format: DateUtil.longFormatDs)}',
+                      maxLines: 1,
+                      style: style,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    dense: true,
+                    trailing: TextButton(
+                      onPressed: () => _blackListController.onRemove(
+                        context,
+                        index,
+                        item.uname,
+                        item.mid,
+                      ),
+                      child: const Text('移除'),
+                    ),
+                  );
+                },
+              )
+            : HttpError(onReload: _blackListController.onReload),
       Error(:var errMsg) => HttpError(
-          errMsg: errMsg,
-          onReload: _blackListController.onReload,
-        ),
+        errMsg: errMsg,
+        onReload: _blackListController.onReload,
+      ),
     };
   }
 }

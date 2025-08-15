@@ -5,34 +5,35 @@ import 'package:PiliPlus/http/dynamics.dart';
 import 'package:PiliPlus/http/fav.dart';
 import 'package:PiliPlus/http/loading_state.dart';
 import 'package:PiliPlus/http/video.dart';
-import 'package:PiliPlus/models/common/account_type.dart';
 import 'package:PiliPlus/models/dynamics/article_content_model.dart'
     show ArticleContentModel;
 import 'package:PiliPlus/models/dynamics/result.dart';
 import 'package:PiliPlus/models/model_avatar.dart';
 import 'package:PiliPlus/models_new/article/article_info/data.dart';
 import 'package:PiliPlus/models_new/article/article_view/data.dart';
-import 'package:PiliPlus/pages/common/reply_controller.dart';
+import 'package:PiliPlus/pages/common/dyn/common_dyn_controller.dart';
 import 'package:PiliPlus/utils/accounts.dart';
+import 'package:PiliPlus/utils/extension.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
 import 'package:PiliPlus/utils/url_utils.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 
-class ArticleController extends ReplyController<MainListReply> {
+class ArticleController extends CommonDynController<MainListReply> {
   late String id;
   late String type;
 
   late String url;
-  late int commentType;
   late int commentId;
+  @override
+  int get oid => commentId;
+  late int commentType;
+  @override
+  int get replyType => commentType;
   final summary = Summary();
-
-  RxBool showTitle = false.obs;
 
   late final RxInt topIndex = 0.obs;
 
-  late final horizontalPreview = Pref.horizontalPreview;
   late final showDynActionBar = Pref.showDynActionBar;
 
   @override
@@ -54,8 +55,9 @@ class ArticleController extends ReplyController<MainListReply> {
 
     // to opus
     if (type == 'read') {
-      UrlUtils.parseRedirectUrl('https://www.bilibili.com/read/cv$id/')
-          .then((url) {
+      UrlUtils.parseRedirectUrl('https://www.bilibili.com/read/cv$id/').then((
+        url,
+      ) {
         if (url != null) {
           id = url.split('/').last;
           type = 'opus';
@@ -162,7 +164,7 @@ class ArticleController extends ReplyController<MainListReply> {
     }
     if (isLoaded.value) {
       queryData();
-      if (Accounts.get(AccountType.heartbeat).isLogin && !Pref.historyPause) {
+      if (Accounts.heartbeat.isLogin && !Pref.historyPause) {
         VideoHttp.historyReport(aid: commentId, type: 5);
       }
     }
@@ -174,30 +176,28 @@ class ArticleController extends ReplyController<MainListReply> {
   }
 
   @override
-  Future<LoadingState<MainListReply>> customGetData() {
-    return ReplyGrpc.mainList(
-      type: commentType,
-      oid: commentId,
-      mode: mode.value,
-      cursorNext: cursorNext,
-      offset: paginationReply?.nextOffset,
-    );
-  }
+  Future<LoadingState<MainListReply>> customGetData() => ReplyGrpc.mainList(
+    type: commentType,
+    oid: commentId,
+    mode: mode.value,
+    cursorNext: cursorNext,
+    offset: paginationReply?.nextOffset,
+  );
 
   Future<void> onFav() async {
-    bool isFav = stats.value?.favorite?.status == true;
+    final favorite = stats.value?.favorite;
+    bool isFav = favorite?.status == true;
     final res = type == 'read'
         ? isFav
-            ? await FavHttp.delFavArticle(id: commentId)
-            : await FavHttp.addFavArticle(id: commentId)
+              ? await FavHttp.delFavArticle(id: commentId)
+              : await FavHttp.addFavArticle(id: commentId)
         : await FavHttp.communityAction(opusId: id, action: isFav ? 4 : 3);
     if (res['status']) {
-      stats.value?.favorite?.status = !isFav;
-      var count = stats.value?.favorite?.count ?? 0;
+      favorite?.status = !isFav;
       if (isFav) {
-        stats.value?.favorite?.count = count - 1;
+        favorite?.count--;
       } else {
-        stats.value?.favorite?.count = count + 1;
+        favorite?.count++;
       }
       stats.refresh();
       SmartDialog.showToast('${isFav ? '取消' : ''}收藏成功');
@@ -207,17 +207,18 @@ class ArticleController extends ReplyController<MainListReply> {
   }
 
   Future<void> onLike() async {
-    bool isLike = stats.value?.like?.status == true;
+    final like = stats.value?.like;
+    bool isLike = like?.status == true;
     final res = await DynamicsHttp.thumbDynamic(
-        dynamicId: opusData?.idStr ?? articleData?.dynIdStr,
-        up: isLike ? 2 : 1);
+      dynamicId: opusData?.idStr ?? articleData?.dynIdStr,
+      up: isLike ? 2 : 1,
+    );
     if (res['status']) {
-      stats.value?.like?.status = !isLike;
-      int count = stats.value?.like?.count ?? 0;
+      like?.status = !isLike;
       if (isLike) {
-        stats.value?.like?.count = count - 1;
+        like?.count--;
       } else {
-        stats.value?.like?.count = count + 1;
+        like?.count++;
       }
       stats.refresh();
       SmartDialog.showToast(!isLike ? '点赞成功' : '取消赞');

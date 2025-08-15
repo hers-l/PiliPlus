@@ -22,7 +22,8 @@ class _FavSortPageState extends State<FavSortPage> {
 
   final GlobalKey _key = GlobalKey();
   late List<FavDetailItemModel> sortList = List<FavDetailItemModel>.from(
-      _favDetailController.loadingState.value.data!);
+    _favDetailController.loadingState.value.data!,
+  );
   List<String> sort = <String>[];
 
   final ScrollController _scrollController = ScrollController();
@@ -78,7 +79,7 @@ class _FavSortPageState extends State<FavSortPage> {
               }
               var res = await FavHttp.sortFav(
                 mediaId: _favDetailController.mediaId,
-                sort: sort,
+                sort: sort.join(','),
               );
               if (res['status']) {
                 SmartDialog.showToast('排序完成');
@@ -107,10 +108,12 @@ class _FavSortPageState extends State<FavSortPage> {
     }
 
     final oldItem = sortList[oldIndex];
-    final newItem =
-        sortList.getOrNull(oldIndex > newIndex ? newIndex - 1 : newIndex);
+    final newItem = sortList.getOrNull(
+      oldIndex > newIndex ? newIndex - 1 : newIndex,
+    );
     sort.add(
-        '${newItem == null ? '0:0' : '${newItem.id}:${newItem.type}'}:${oldItem.id}:${oldItem.type}');
+      '${newItem == null ? '0:0' : '${newItem.id}:${newItem.type}'}:${oldItem.id}:${oldItem.type}',
+    );
 
     final tabsItem = sortList.removeAt(oldIndex);
     sortList.insert(newIndex, tabsItem);
@@ -133,10 +136,7 @@ class _FavSortPageState extends State<FavSortPage> {
         return SizedBox(
           key: Key(item.id.toString()),
           height: 98,
-          child: FavVideoCardH(
-            isSort: true,
-            item: item,
-          ),
+          child: FavVideoCardH(item: item),
         );
       },
     );

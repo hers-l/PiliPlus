@@ -48,8 +48,9 @@ class PlayUrlModel {
     timeLength = json['timelength'];
     acceptFormat = json['accept_format'];
     acceptDesc = json['accept_description'];
-    acceptQuality =
-        (json['accept_quality'] as List?)?.map<int>((e) => e as int).toList();
+    acceptQuality = (json['accept_quality'] as List?)
+        ?.map<int>((e) => e as int)
+        .toList();
     videoCodecid = json['video_codecid'];
     seekParam = json['seek_param'];
     seekType = json['seek_type'];
@@ -169,21 +170,25 @@ abstract class BaseItem {
 
   BaseItem.fromJson(Map<String, dynamic> json) {
     id = json['id'];
-    baseUrl = json['baseUrl'];
-    final backupUrls = (json['backupUrl'] as List?)?.cast<String>() ?? [];
+    baseUrl = json['baseUrl'] ?? json['base_url'];
+    final backupUrls =
+        ((json['backupUrl'] ?? json['backup_url']) as List?)?.cast<String>() ??
+        <String>[];
     backupUrl = backupUrls.isNotEmpty
-        ? backupUrls.firstWhere((i) => !_isMCDNorPCDN(i),
-            orElse: () => backupUrls.first)
+        ? backupUrls.firstWhere(
+            (i) => !_isMCDNorPCDN(i),
+            orElse: () => backupUrls.first,
+          )
         : null;
-    bandWidth = json['bandWidth'];
+    bandWidth = json['bandWidth'] ?? json['bandwidth'];
     mimeType = json['mime_type'];
     codecs = json['codecs'];
     width = json['width'];
     height = json['height'];
-    frameRate = json['frameRate'];
+    frameRate = json['frameRate'] ?? json['frame_rate'];
     sar = json['sar'];
-    startWithSap = json['startWithSap'];
-    segmentBase = json['segmentBase'];
+    startWithSap = json['startWithSap'] ?? json['start_with_sap'];
+    segmentBase = json['segmentBase'] ?? json['segment_base'];
     codecid = json['codecid'];
   }
 }
@@ -236,14 +241,14 @@ class FormatItem {
   String? format;
   String? newDesc;
   String? displayDesc;
-  List? codecs;
+  List<String>? codecs;
 
   FormatItem.fromJson(Map<String, dynamic> json) {
     quality = json['quality'];
     format = json['format'];
     newDesc = json['new_description'];
     displayDesc = json['display_desc'];
-    codecs = json['codecs'];
+    codecs = (json['codecs'] as List?)?.cast<String>();
   }
 }
 

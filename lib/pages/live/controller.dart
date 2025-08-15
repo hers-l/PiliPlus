@@ -3,6 +3,8 @@ import 'package:PiliPlus/http/live.dart';
 import 'package:PiliPlus/http/loading_state.dart';
 import 'package:PiliPlus/models_new/live/live_feed_index/card_data_list_item.dart';
 import 'package:PiliPlus/models_new/live/live_feed_index/card_list.dart';
+import 'package:PiliPlus/models_new/live/live_feed_index/data.dart';
+import 'package:PiliPlus/models_new/live/live_second_list/data.dart';
 import 'package:PiliPlus/models_new/live/live_second_list/tag.dart';
 import 'package:PiliPlus/pages/common/common_list_controller.dart';
 import 'package:PiliPlus/services/account_service.dart';
@@ -47,17 +49,18 @@ class LiveController extends CommonListController {
   @override
   bool customHandleResponse(bool isRefresh, Success response) {
     if (isRefresh) {
-      if (areaIndex.value == 0) {
-        if (response.response.hasMore == 0) {
+      final res = response.response;
+      if (res case LiveIndexData data) {
+        if (data.hasMore == 0) {
           isEnd = true;
         }
         topState.value = Pair(
-          first: response.response.followItem,
-          second: response.response.areaItem,
+          first: data.followItem,
+          second: data.areaItem,
         );
-      } else {
-        count = response.response.count;
-        newTags = response.response.newTags;
+      } else if (res case LiveSecondData data) {
+        count = data.count;
+        newTags = data.newTags;
         if (sortType != null) {
           tagIndex.value =
               newTags?.indexWhere((e) => e.sortType == sortType) ?? -1;
@@ -79,7 +82,9 @@ class LiveController extends CommonListController {
       );
     }
     return LiveHttp.liveFeedIndex(
-        pn: page, isLogin: accountService.isLogin.value);
+      pn: page,
+      isLogin: accountService.isLogin.value,
+    );
   }
 
   @override
@@ -105,16 +110,19 @@ class LiveController extends CommonListController {
         first: data.followItem,
         second: data.areaItem,
       );
-      areaIndex.value = (data.areaItem?.cardData?.areaEntranceV3?.list
-                  ?.indexWhere((e) =>
-                      e.areaV2Id == areaId &&
-                      e.areaV2ParentId == parentAreaId) ??
+      areaIndex.value =
+          (data.areaItem?.cardData?.areaEntranceV3?.list?.indexWhere(
+                (e) => e.areaV2Id == areaId && e.areaV2ParentId == parentAreaId,
+              ) ??
               -2) +
           1;
     }
   }
 
   void onSelectArea(int index, CardLiveItem? cardLiveItem) {
+    if (isLoading) {
+      return; // areaIndex conflict
+    }
     if (index == areaIndex.value) {
       return;
     }
@@ -132,6 +140,9 @@ class LiveController extends CommonListController {
   }
 
   void onSelectTag(int index, String? sortType) {
+    if (isLoading) {
+      return;
+    }
     tagIndex.value = index;
     this.sortType = sortType;
 

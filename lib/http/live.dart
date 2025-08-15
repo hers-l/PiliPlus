@@ -2,6 +2,8 @@ import 'package:PiliPlus/common/constants.dart';
 import 'package:PiliPlus/http/api.dart';
 import 'package:PiliPlus/http/init.dart';
 import 'package:PiliPlus/http/loading_state.dart';
+import 'package:PiliPlus/http/login.dart';
+import 'package:PiliPlus/http/ua_type.dart';
 import 'package:PiliPlus/models/common/live_search_type.dart';
 import 'package:PiliPlus/models_new/live/live_area_list/area_item.dart';
 import 'package:PiliPlus/models_new/live/live_area_list/area_list.dart';
@@ -31,7 +33,7 @@ class LiveHttp {
         'msg': msg,
         'color': 16777215,
         'mode': 1,
-        if (dmType != null) 'dm_type': dmType,
+        'dm_type': ?dmType,
         if (emoticonOptions != null)
           'emoticonOptions': emoticonOptions
         else ...{
@@ -83,7 +85,7 @@ class LiveHttp {
     if (res.data['code'] == 0) {
       return {
         'status': true,
-        'data': RoomPlayInfoData.fromJson(res.data['data'])
+        'data': RoomPlayInfoData.fromJson(res.data['data']),
       };
     } else {
       return {'status': false, 'msg': res.data['message']};
@@ -91,13 +93,16 @@ class LiveHttp {
   }
 
   static Future liveRoomInfoH5({roomId, qn}) async {
-    var res = await Request().get(Api.liveRoomInfoH5, queryParameters: {
-      'room_id': roomId,
-    });
+    var res = await Request().get(
+      Api.liveRoomInfoH5,
+      queryParameters: {
+        'room_id': roomId,
+      },
+    );
     if (res.data['code'] == 0) {
       return {
         'status': true,
-        'data': RoomInfoH5Data.fromJson(res.data['data'])
+        'data': RoomInfoH5Data.fromJson(res.data['data']),
       };
     } else {
       return {'status': false, 'msg': res.data['message']};
@@ -111,7 +116,7 @@ class LiveHttp {
       options: Options(
         headers: {
           'referer': 'https://live.bilibili.com/$roomId',
-          'user-agent': Request.headerUa(type: 'pc'),
+          'user-agent': UaType.pc.ua,
         },
       ),
     );
@@ -133,15 +138,16 @@ class LiveHttp {
     if (res.data['code'] == 0) {
       return {
         'status': true,
-        'data': LiveDmInfoData.fromJson(res.data['data'])
+        'data': LiveDmInfoData.fromJson(res.data['data']),
       };
     } else {
       return {'status': false, 'msg': res.data['message']};
     }
   }
 
-  static Future<LoadingState<List<LiveEmoteDatum>?>> getLiveEmoticons(
-      {required int roomId}) async {
+  static Future<LoadingState<List<LiveEmoteDatum>?>> getLiveEmoticons({
+    required int roomId,
+  }) async {
     var res = await Request().get(
       Api.getLiveEmoticons,
       queryParameters: {
@@ -164,23 +170,25 @@ class LiveHttp {
     final params = {
       if (isLogin) 'access_key': Accounts.main.accessKey,
       'appkey': Constants.appKey,
+      'channel': 'master',
       'actionKey': 'appkey',
-      'build': '8430300',
+      'build': 8430300,
+      'version': '8.43.0',
       'c_locale': 'zh_CN',
-      'device': 'pad',
+      'device': 'android',
       'device_name': 'android',
-      'device_type': '0',
-      'fnval': '912',
-      'disable_rcmd': '0',
-      'https_url_req': '1',
-      if (moduleSelect == true) 'module_select': '1',
-      'mobi_app': 'android_hd',
+      'device_type': 0,
+      'fnval': 912,
+      'disable_rcmd': 0,
+      'https_url_req': 1,
+      if (moduleSelect == true) 'module_select': 1,
+      'mobi_app': 'android',
       'network': 'wifi',
       'page': pn,
       'platform': 'android',
-      if (isLogin) 'relation_page': '1',
+      if (isLogin) 'relation_page': 1,
       's_locale': 'zh_CN',
-      'scale': '2',
+      'scale': 2,
       'statistics': Constants.statisticsApp,
       'ts': DateTime.now().millisecondsSinceEpoch ~/ 1000,
     };
@@ -192,6 +200,23 @@ class LiveHttp {
     var res = await Request().get(
       Api.liveFeedIndex,
       queryParameters: params,
+      options: Options(
+        headers: {
+          'buvid': LoginHttp.buvid,
+          'fp_local':
+              '1111111111111111111111111111111111111111111111111111111111111111',
+          'fp_remote':
+              '1111111111111111111111111111111111111111111111111111111111111111',
+          'session_id': '11111111',
+          'env': 'prod',
+          'app-key': 'android',
+          'User-Agent': Constants.userAgentApp,
+          'x-bili-trace-id': Constants.traceId,
+          'x-bili-aurora-eid': '',
+          'x-bili-aurora-zone': '',
+          'bili-http-engine': 'cronet',
+        },
+      ),
     );
     if (res.data['code'] == 0) {
       return Success(LiveIndexData.fromJson(res.data['data']));
@@ -228,29 +253,31 @@ class LiveHttp {
       if (isLogin) 'access_key': Accounts.main.accessKey,
       'appkey': Constants.appKey,
       'actionKey': 'appkey',
-      if (areaId != null) 'area_id': areaId,
-      if (parentAreaId != null) 'parent_area_id': parentAreaId,
-      'build': '8430300',
+      'channel': 'master',
+      'area_id': ?areaId,
+      'parent_area_id': ?parentAreaId,
+      'build': 8430300,
+      'version': '8.43.0',
       'c_locale': 'zh_CN',
-      'device': 'pad',
+      'device': 'android',
       'device_name': 'android',
-      'device_type': '0',
-      'fnval': '912',
-      'disable_rcmd': '0',
-      'https_url_req': '1',
-      'mobi_app': 'android_hd',
-      'module_select': '0',
+      'device_type': 0,
+      'fnval': 912,
+      'disable_rcmd': 0,
+      'https_url_req': 1,
+      'mobi_app': 'android',
+      'module_select': 0,
       'network': 'wifi',
       'page': pn,
-      'page_size': '20',
+      'page_size': 20,
       'platform': 'android',
-      'qn': '0',
-      if (sortType != null) 'sort_type': sortType,
-      'tag_version': '1',
+      'qn': 0,
+      'sort_type': ?sortType,
+      'tag_version': 1,
       's_locale': 'zh_CN',
-      'scale': '2',
+      'scale': 2,
       'statistics': Constants.statisticsApp,
-      'ts': (DateTime.now().millisecondsSinceEpoch ~/ 1000).toString(),
+      'ts': DateTime.now().millisecondsSinceEpoch ~/ 1000,
     };
     AppSign.appSign(
       params,
@@ -260,6 +287,23 @@ class LiveHttp {
     var res = await Request().get(
       Api.liveSecondList,
       queryParameters: params,
+      options: Options(
+        headers: {
+          'buvid': LoginHttp.buvid,
+          'fp_local':
+              '1111111111111111111111111111111111111111111111111111111111111111',
+          'fp_remote':
+              '1111111111111111111111111111111111111111111111111111111111111111',
+          'session_id': '11111111',
+          'env': 'prod',
+          'app-key': 'android',
+          'User-Agent': Constants.userAgentApp,
+          'x-bili-trace-id': Constants.traceId,
+          'x-bili-aurora-eid': '',
+          'x-bili-aurora-zone': '',
+          'bili-http-engine': 'cronet',
+        },
+      ),
     );
     if (res.data['code'] == 0) {
       return Success(LiveSecondData.fromJson(res.data['data']));
@@ -275,11 +319,13 @@ class LiveHttp {
       if (isLogin) 'access_key': Accounts.main.accessKey,
       'appkey': Constants.appKey,
       'actionKey': 'appkey',
-      'build': '8430300',
+      'build': 8430300,
+      'channel': 'master',
+      'version': '8.43.0',
       'c_locale': 'zh_CN',
-      'device': 'pad',
-      'disable_rcmd': '0',
-      'mobi_app': 'android_hd',
+      'device': 'android',
+      'disable_rcmd': 0,
+      'mobi_app': 'android',
       'platform': 'android',
       's_locale': 'zh_CN',
       'statistics': Constants.statisticsApp,
@@ -295,9 +341,11 @@ class LiveHttp {
       queryParameters: params,
     );
     if (res.data['code'] == 0) {
-      return Success((res.data['data']?['list'] as List?)
-          ?.map((e) => AreaList.fromJson(e))
-          .toList());
+      return Success(
+        (res.data['data']?['list'] as List?)
+            ?.map((e) => AreaList.fromJson(e))
+            .toList(),
+      );
     } else {
       return Error(res.data['message']);
     }
@@ -310,11 +358,13 @@ class LiveHttp {
       if (isLogin) 'access_key': Accounts.main.accessKey,
       'appkey': Constants.appKey,
       'actionKey': 'appkey',
-      'build': '8430300',
+      'build': 8430300,
+      'channel': 'master',
+      'version': '8.43.0',
       'c_locale': 'zh_CN',
-      'device': 'pad',
-      'disable_rcmd': '0',
-      'mobi_app': 'android_hd',
+      'device': 'android',
+      'disable_rcmd': 0,
+      'mobi_app': 'android',
       'platform': 'android',
       's_locale': 'zh_CN',
       'statistics': Constants.statisticsApp,
@@ -331,28 +381,32 @@ class LiveHttp {
     );
 
     if (res.data['code'] == 0) {
-      return Success((res.data['data']?['tags'] as List?)
-              ?.map((e) => AreaItem.fromJson(e))
-              .toList() ??
-          <AreaItem>[]);
+      return Success(
+        (res.data['data']?['tags'] as List?)
+                ?.map((e) => AreaItem.fromJson(e))
+                .toList() ??
+            <AreaItem>[],
+      );
     } else {
       return Error(res.data['message']);
     }
   }
 
   static Future setLiveFavTag({
-    required List ids,
+    required String ids,
   }) async {
     final data = {
-      'tags': ids.join(','),
+      'tags': ids,
       'access_key': Accounts.main.accessKey,
       'appkey': Constants.appKey,
       'actionKey': 'appkey',
-      'build': '8430300',
+      'build': 8430300,
+      'channel': 'master',
+      'version': '8.43.0',
       'c_locale': 'zh_CN',
-      'device': 'pad',
-      'disable_rcmd': '0',
-      'mobi_app': 'android_hd',
+      'device': 'android',
+      'disable_rcmd': 0,
+      'mobi_app': 'android',
       'platform': 'android',
       's_locale': 'zh_CN',
       'statistics': Constants.statisticsApp,
@@ -366,9 +420,7 @@ class LiveHttp {
     var res = await Request().post(
       Api.setLiveFavTag,
       data: data,
-      options: Options(
-        contentType: Headers.formUrlEncodedContentType,
-      ),
+      options: Options(contentType: Headers.formUrlEncodedContentType),
     );
 
     if (res.data['code'] == 0) {
@@ -386,14 +438,16 @@ class LiveHttp {
       if (isLogin) 'access_key': Accounts.main.accessKey,
       'appkey': Constants.appKey,
       'actionKey': 'appkey',
-      'build': '8430300',
+      'build': 8430300,
+      'channel': 'master',
+      'version': '8.43.0',
       'c_locale': 'zh_CN',
-      'device': 'pad',
-      'disable_rcmd': '0',
+      'device': 'android',
+      'disable_rcmd': 0,
       'need_entrance': 1,
       'parent_id': parentid,
       'source_id': 2,
-      'mobi_app': 'android_hd',
+      'mobi_app': 'android',
       'platform': 'android',
       's_locale': 'zh_CN',
       'statistics': Constants.statisticsApp,
@@ -409,9 +463,9 @@ class LiveHttp {
       queryParameters: params,
     );
     if (res.data['code'] == 0) {
-      return Success((res.data['data'] as List?)
-          ?.map((e) => AreaItem.fromJson(e))
-          .toList());
+      return Success(
+        (res.data['data'] as List?)?.map((e) => AreaItem.fromJson(e)).toList(),
+      );
     } else {
       return Error(res.data['message']);
     }
@@ -427,14 +481,16 @@ class LiveHttp {
       if (isLogin) 'access_key': Accounts.main.accessKey,
       'appkey': Constants.appKey,
       'actionKey': 'appkey',
-      'build': '8430300',
+      'build': 8430300,
+      'channel': 'master',
+      'version': '8.43.0',
       'c_locale': 'zh_CN',
-      'device': 'pad',
+      'device': 'android',
       'page': page,
       'pagesize': 30,
       'keyword': keyword,
-      'disable_rcmd': '0',
-      'mobi_app': 'android_hd',
+      'disable_rcmd': 0,
+      'mobi_app': 'android',
       'platform': 'android',
       's_locale': 'zh_CN',
       'statistics': Constants.statisticsApp,
@@ -458,7 +514,8 @@ class LiveHttp {
   }
 
   static Future<LoadingState<ShieldInfo?>> getLiveInfoByUser(
-      dynamic roomId) async {
+    dynamic roomId,
+  ) async {
     var res = await Request().get(
       Api.getLiveInfoByUser,
       queryParameters: await WbiSign.makSign({
@@ -556,6 +613,31 @@ class LiveHttp {
     );
     if (res.data['code'] == 0) {
       return {'status': true, 'data': res.data['data']};
+    } else {
+      return {'status': false, 'msg': res.data['message']};
+    }
+  }
+
+  static Future liveLikeReport({
+    required int clickTime,
+    required dynamic roomId,
+    required dynamic uid,
+    required dynamic anchorId,
+  }) async {
+    var res = await Request().post(
+      Api.liveLikeReport,
+      data: await WbiSign.makSign({
+        'click_time': clickTime,
+        'room_id': roomId,
+        'uid': uid,
+        'anchor_id': anchorId,
+        'web_location': 444.8,
+        'csrf': Accounts.heartbeat.csrf,
+      }),
+      options: Options(contentType: Headers.formUrlEncodedContentType),
+    );
+    if (res.data['code'] == 0) {
+      return {'status': true};
     } else {
       return {'status': false, 'msg': res.data['message']};
     }

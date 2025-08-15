@@ -5,11 +5,7 @@ import 'package:PiliPlus/http/api.dart';
 import 'package:PiliPlus/http/init.dart';
 import 'package:PiliPlus/models/common/home_tab_type.dart';
 import 'package:PiliPlus/pages/common/common_controller.dart';
-import 'package:PiliPlus/pages/mine/view.dart';
 import 'package:PiliPlus/services/account_service.dart';
-import 'package:PiliPlus/utils/feed_back.dart';
-import 'package:PiliPlus/utils/storage.dart';
-import 'package:PiliPlus/utils/storage_key.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
@@ -24,7 +20,7 @@ class HomeController extends GetxController
   final bool hideSearchBar = Pref.hideSearchBar;
   final bool useSideBar = Pref.useSideBar;
 
-  final bool enableSearchWord = Pref.enableSearchWord;
+  bool enableSearchWord = Pref.enableSearchWord;
   late RxString defaultSearch = ''.obs;
   late int lateCheckSearchAt = 0;
 
@@ -59,8 +55,8 @@ class HomeController extends GetxController
   }
 
   void setTabConfig() {
-    List<int>? localTabs = GStorage.setting.get(SettingBoxKey.tabBarSort);
-    tabs = localTabs?.map((i) => HomeTabType.values[i]).toList() ??
+    tabs =
+        Pref.tabbarSort?.map((i) => HomeTabType.values[i]).toList() ??
         HomeTabType.values;
 
     tabController = TabController(
@@ -81,19 +77,9 @@ class HomeController extends GetxController
       var res = await Request().get(Api.searchDefault);
       if (res.data['code'] == 0) {
         defaultSearch.value = res.data['data']?['name'] ?? '';
+        // defaultSearch.value = res.data['data']?['show_name'] ?? '';
       }
     } catch (_) {}
-  }
-
-  void showUserInfoDialog(BuildContext context) {
-    feedBack();
-    showDialog(
-      context: context,
-      useSafeArea: true,
-      builder: (context) => const Dialog(
-        child: MinePage(),
-      ),
-    );
   }
 
   @override

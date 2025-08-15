@@ -6,11 +6,11 @@ import 'package:PiliPlus/models/common/image_type.dart';
 import 'package:PiliPlus/pages/home/controller.dart';
 import 'package:PiliPlus/pages/main/controller.dart';
 import 'package:PiliPlus/pages/mine/controller.dart';
+import 'package:PiliPlus/utils/context_ext.dart';
 import 'package:PiliPlus/utils/feed_back.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:get/get.dart' hide ContextExtensionss;
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
-import 'package:stream_transform/stream_transform.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -33,8 +33,7 @@ class _HomePageState extends State<HomePage>
     final theme = Theme.of(context);
     return Column(
       children: [
-        if (!_homeController.useSideBar &&
-            context.orientation == Orientation.portrait)
+        if (!_homeController.useSideBar && context.isPortrait)
           customAppBar(theme),
         if (_homeController.tabs.length > 1)
           Material(
@@ -47,7 +46,7 @@ class _HomePageState extends State<HomePage>
                 child: TabBar(
                   controller: _homeController.tabController,
                   tabs: [
-                    for (var i in _homeController.tabs) Tab(text: i.label)
+                    for (var i in _homeController.tabs) Tab(text: i.label),
                   ],
                   isScrollable: true,
                   dividerColor: Colors.transparent,
@@ -104,8 +103,7 @@ class _HomePageState extends State<HomePage>
                         child: Material(
                           type: MaterialType.transparency,
                           child: InkWell(
-                            onTap: () =>
-                                _homeController.showUserInfoDialog(context),
+                            onTap: _mainController.toMinePage,
                             splashColor: theme.colorScheme.primaryContainer
                                 .withValues(alpha: 0.3),
                             customBorder: const CircleBorder(),
@@ -115,30 +113,33 @@ class _HomePageState extends State<HomePage>
                       Positioned(
                         right: -6,
                         bottom: -6,
-                        child: Obx(() => MineController.anonymity.value
-                            ? IgnorePointer(
-                                child: Container(
-                                  padding: const EdgeInsets.all(2),
-                                  decoration: BoxDecoration(
-                                    color: theme.colorScheme.secondaryContainer,
-                                    shape: BoxShape.circle,
+                        child: Obx(
+                          () => MineController.anonymity.value
+                              ? IgnorePointer(
+                                  child: Container(
+                                    padding: const EdgeInsets.all(2),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          theme.colorScheme.secondaryContainer,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      size: 16,
+                                      MdiIcons.incognito,
+                                      color: theme
+                                          .colorScheme
+                                          .onSecondaryContainer,
+                                    ),
                                   ),
-                                  child: Icon(
-                                    size: 16,
-                                    MdiIcons.incognito,
-                                    color:
-                                        theme.colorScheme.onSecondaryContainer,
-                                  ),
-                                ),
-                              )
-                            : const SizedBox.shrink()),
+                                )
+                              : const SizedBox.shrink(),
+                        ),
                       ),
                     ],
                   )
                 : defaultUser(
                     theme: theme,
-                    onPressed: () =>
-                        _homeController.showUserInfoDialog(context),
+                    onPressed: _mainController.toMinePage,
                   ),
           ),
         ),
@@ -147,14 +148,15 @@ class _HomePageState extends State<HomePage>
   }
 
   Widget customAppBar(ThemeData theme) {
+    if (!_homeController.hideSearchBar) {
+      return Container(
+        height: 52,
+        padding: const EdgeInsets.fromLTRB(14, 6, 14, 0),
+        child: searchBarAndUser(theme),
+      );
+    }
     return StreamBuilder(
-      stream: _homeController.hideSearchBar
-          ? _mainController.navSearchStreamDebounce
-              ? _homeController.searchBarStream?.stream
-                  .distinct()
-                  .throttle(const Duration(milliseconds: 500))
-              : _homeController.searchBarStream?.stream.distinct()
-          : null,
+      stream: _homeController.searchBarStream?.stream.distinct(),
       initialData: true,
       builder: (BuildContext context, AsyncSnapshot snapshot) {
         return AnimatedOpacity(
@@ -181,8 +183,9 @@ class _HomePageState extends State<HomePage>
           color: theme.colorScheme.onSecondaryContainer.withValues(alpha: 0.05),
           child: InkWell(
             borderRadius: const BorderRadius.all(Radius.circular(25)),
-            splashColor:
-                theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+            splashColor: theme.colorScheme.primaryContainer.withValues(
+              alpha: 0.3,
+            ),
             onTap: () => Get.toNamed(
               '/search',
               parameters: {
@@ -199,19 +202,17 @@ class _HomePageState extends State<HomePage>
                   semanticLabel: '搜索',
                 ),
                 const SizedBox(width: 10),
-                if (_homeController.enableSearchWord) ...[
-                  Expanded(
-                    child: Obx(
-                      () => Text(
-                        _homeController.defaultSearch.value,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: theme.colorScheme.outline),
-                      ),
+                Expanded(
+                  child: Obx(
+                    () => Text(
+                      _homeController.defaultSearch.value,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: theme.colorScheme.outline),
                     ),
                   ),
-                  const SizedBox(width: 2),
-                ],
+                ),
+                const SizedBox(width: 5),
               ],
             ),
           ),
@@ -232,9 +233,9 @@ Widget defaultUser({
       tooltip: '默认用户头像',
       style: ButtonStyle(
         padding: WidgetStateProperty.all(EdgeInsets.zero),
-        backgroundColor: WidgetStateProperty.resolveWith((states) {
-          return theme.colorScheme.onInverseSurface;
-        }),
+        backgroundColor: WidgetStatePropertyAll(
+          theme.colorScheme.onInverseSurface,
+        ),
       ),
       onPressed: onPressed,
       icon: Icon(
@@ -253,17 +254,20 @@ Widget msgBadge(MainController mainController) {
     Get.toNamed('/whisper');
   }
 
+  final msgUnReadCount = mainController.msgUnReadCount.value;
   return GestureDetector(
     onTap: toWhisper,
     child: Badge(
-      isLabelVisible: mainController.msgBadgeMode != DynamicBadgeMode.hidden &&
-          mainController.msgUnReadCount.value.isNotEmpty,
+      isLabelVisible:
+          mainController.msgBadgeMode != DynamicBadgeMode.hidden &&
+          msgUnReadCount.isNotEmpty,
       alignment: mainController.msgBadgeMode == DynamicBadgeMode.number
           ? const Alignment(0, -0.5)
           : const Alignment(0.5, -0.5),
-      label: mainController.msgBadgeMode == DynamicBadgeMode.number &&
-              mainController.msgUnReadCount.value.isNotEmpty
-          ? Text(mainController.msgUnReadCount.value.toString())
+      label:
+          mainController.msgBadgeMode == DynamicBadgeMode.number &&
+              msgUnReadCount.isNotEmpty
+          ? Text(msgUnReadCount)
           : null,
       child: IconButton(
         tooltip: '消息',

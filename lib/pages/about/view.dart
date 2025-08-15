@@ -15,12 +15,16 @@ import 'package:PiliPlus/utils/page_utils.dart';
 import 'package:PiliPlus/utils/storage.dart';
 import 'package:PiliPlus/utils/update.dart';
 import 'package:PiliPlus/utils/utils.dart';
+import 'package:dio/dio.dart' show Headers;
+import 'package:document_file_save_plus/document_file_save_plus_platform_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:share_plus/share_plus.dart';
 
 class AboutPage extends StatefulWidget {
   const AboutPage({super.key, this.showAppBar});
@@ -47,8 +51,9 @@ class _AboutPageState extends State<AboutPage> {
   }
 
   Future<void> getCacheSize() async {
-    cacheSize.value =
-        CacheManage.formatSize(await CacheManage().loadApplicationCache());
+    cacheSize.value = CacheManage.formatSize(
+      await CacheManage().loadApplicationCache(),
+    );
   }
 
   Future<void> getCurrentApp() async {
@@ -64,8 +69,9 @@ class _AboutPageState extends State<AboutPage> {
     final outline = theme.colorScheme.outline;
     final subTitleStyle = TextStyle(fontSize: 13, color: outline);
     return Scaffold(
-      appBar:
-          widget.showAppBar == false ? null : AppBar(title: const Text('关于')),
+      appBar: widget.showAppBar == false
+          ? null
+          : AppBar(title: const Text('关于')),
       body: ListView(
         children: [
           GestureDetector(
@@ -91,12 +97,11 @@ class _AboutPageState extends State<AboutPage> {
                 );
               }
             },
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 150),
-              child: ExcludeSemantics(
-                child: Image.asset(
-                  'assets/images/logo/logo.png',
-                ),
+            child: ExcludeSemantics(
+              child: Image.asset(
+                width: 150,
+                height: 150,
+                'assets/images/logo/logo.png',
               ),
             ),
           ),
@@ -143,7 +148,8 @@ Commit Hash: ${BuildConfig.commitHash}''',
             ),
             leading: const Icon(Icons.info_outline),
             onTap: () => PageUtils.launchURL(
-                'https://github.com/bggRGjQaUbCoE/PiliPlus/commit/${BuildConfig.commitHash}'),
+              'https://github.com/bggRGjQaUbCoE/PiliPlus/commit/${BuildConfig.commitHash}',
+            ),
             onLongPress: () => Utils.copyText(BuildConfig.commitHash),
           ),
           Divider(
@@ -236,8 +242,9 @@ Commit Hash: ${BuildConfig.commitHash}''',
                     title: const Text('导入', style: style),
                     onTap: () async {
                       Get.back();
-                      ClipboardData? data =
-                          await Clipboard.getData('text/plain');
+                      ClipboardData? data = await Clipboard.getData(
+                        'text/plain',
+                      );
                       if (data?.text?.isNotEmpty != true) {
                         SmartDialog.showToast('剪贴板无数据');
                         return;
@@ -264,19 +271,24 @@ Commit Hash: ${BuildConfig.commitHash}''',
                                   Get.back();
                                   try {
                                     final res = (jsonDecode(data.text!) as Map)
-                                        .map((key, value) => MapEntry(
-                                            key, LoginAccount.fromJson(value)));
+                                        .map(
+                                          (key, value) => MapEntry(
+                                            key,
+                                            LoginAccount.fromJson(value),
+                                          ),
+                                        );
                                     Accounts.account
                                         .putAll(res)
-                                        .whenComplete(() => Accounts.refresh())
+                                        .whenComplete(Accounts.refresh)
                                         .whenComplete(() {
-                                      MineController.anonymity.value =
-                                          !Accounts.get(AccountType.heartbeat)
-                                              .isLogin;
-                                      if (Accounts.main.isLogin) {
-                                        return LoginUtils.onLoginMain();
-                                      }
-                                    });
+                                          MineController.anonymity.value =
+                                              !Accounts.get(
+                                                AccountType.heartbeat,
+                                              ).isLogin;
+                                          if (Accounts.main.isLogin) {
+                                            return LoginUtils.onLoginMain();
+                                          }
+                                        });
                                   } catch (e) {
                                     SmartDialog.showToast('导入失败：$e');
                                   }
@@ -306,6 +318,42 @@ Commit Hash: ${BuildConfig.commitHash}''',
                   children: [
                     ListTile(
                       dense: true,
+                      title: const Text('导出文件至本地', style: style),
+                      onTap: () async {
+                        Get.back();
+                        final res = utf8.encode(GStorage.exportAllSettings());
+                        final name =
+                            'piliplus_settings_${context.isTablet ? 'pad' : 'phone'}_'
+                            '${DateFormat('yyyyMMddHHmmss').format(DateTime.now())}.json';
+                        try {
+                          DocumentFileSavePlusPlatform.instance
+                              .saveMultipleFiles(
+                                dataList: [res],
+                                fileNameList: [name],
+                                mimeTypeList: [Headers.jsonContentType],
+                              );
+                          if (Platform.isAndroid) {
+                            SmartDialog.showToast('已保存');
+                          }
+                        } catch (e) {
+                          SharePlus.instance.share(
+                            ShareParams(
+                              files: [
+                                XFile.fromData(
+                                  res,
+                                  name: name,
+                                  mimeType: Headers.jsonContentType,
+                                ),
+                              ],
+                              sharePositionOrigin:
+                                  await Utils.sharePositionOrigin,
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                    ListTile(
+                      dense: true,
                       title: const Text('导出设置至剪贴板', style: style),
                       onTap: () {
                         Get.back();
@@ -318,8 +366,9 @@ Commit Hash: ${BuildConfig.commitHash}''',
                       title: const Text('从剪贴板导入设置', style: style),
                       onTap: () async {
                         Get.back();
-                        ClipboardData? data =
-                            await Clipboard.getData('text/plain');
+                        ClipboardData? data = await Clipboard.getData(
+                          'text/plain',
+                        );
                         if (data == null ||
                             data.text == null ||
                             data.text!.isEmpty) {
@@ -348,7 +397,8 @@ Commit Hash: ${BuildConfig.commitHash}''',
                                     Get.back();
                                     try {
                                       await GStorage.importAllSettings(
-                                          data.text!);
+                                        data.text!,
+                                      );
                                       SmartDialog.showToast('导入成功');
                                     } catch (e) {
                                       SmartDialog.showToast('导入失败：$e');

@@ -8,10 +8,11 @@ import 'package:PiliPlus/http/loading_state.dart';
 import 'package:PiliPlus/models_new/dynamic/dyn_topic_top/topic_item.dart';
 import 'package:PiliPlus/pages/dynamics_select_topic/controller.dart';
 import 'package:PiliPlus/pages/dynamics_select_topic/widgets/item.dart';
+import 'package:PiliPlus/pages/search/controller.dart' show SearchState;
+import 'package:PiliPlus/utils/context_ext.dart';
 import 'package:PiliPlus/utils/extension.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:stream_transform/stream_transform.dart';
+import 'package:get/get.dart' hide ContextExtensionss;
 
 class SelectTopicPanel extends StatefulWidget {
   const SelectTopicPanel({
@@ -55,10 +56,10 @@ class SelectTopicPanel extends StatefulWidget {
   State<SelectTopicPanel> createState() => _SelectTopicPanelState();
 }
 
-class _SelectTopicPanelState extends State<SelectTopicPanel> {
+class _SelectTopicPanelState extends SearchState<SelectTopicPanel> {
   final _controller = Get.put(SelectTopicController());
-  final StreamController<String> _ctr = StreamController<String>();
-  late StreamSubscription<String> _sub;
+  @override
+  Duration get duration => const Duration(milliseconds: 300);
 
   @override
   void initState() {
@@ -66,22 +67,16 @@ class _SelectTopicPanelState extends State<SelectTopicPanel> {
     if (_controller.loadingState.value is Error) {
       _controller.onReload();
     }
-    _sub = _ctr.stream
-        .debounce(const Duration(milliseconds: 300), trailing: true)
-        .listen((value) {
-      _controller
-        ..enableClear.value = value.isNotEmpty
-        ..onRefresh().whenComplete(() => WidgetsBinding.instance
-            .addPostFrameCallback((_) => widget.scrollController?.jumpToTop()));
-    });
   }
 
   @override
-  void dispose() {
-    _sub.cancel();
-    _ctr.close();
-    super.dispose();
-  }
+  void onKeywordChanged(String value) => _controller
+    ..enableClear.value = value.isNotEmpty
+    ..onRefresh().whenComplete(
+      () => WidgetsBinding.instance.addPostFrameCallback(
+        (_) => widget.scrollController?.jumpToTop(),
+      ),
+    );
 
   @override
   Widget build(BuildContext context) {
@@ -106,7 +101,7 @@ class _SelectTopicPanelState extends State<SelectTopicPanel> {
           child: TextField(
             focusNode: _controller.focusNode,
             controller: _controller.controller,
-            onChanged: _ctr.add,
+            onChanged: ctr!.add,
             decoration: InputDecoration(
               border: const OutlineInputBorder(
                 gapPadding: 0,
@@ -122,10 +117,14 @@ class _SelectTopicPanelState extends State<SelectTopicPanel> {
                 padding: EdgeInsets.only(left: 12, right: 4),
                 child: Icon(Icons.search, size: 20),
               ),
-              prefixIconConstraints:
-                  const BoxConstraints(minHeight: 0, minWidth: 0),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              prefixIconConstraints: const BoxConstraints(
+                minHeight: 0,
+                minWidth: 0,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 6,
+              ),
               suffixIcon: Obx(
                 () => _controller.enableClear.value
                     ? Padding(
@@ -146,16 +145,20 @@ class _SelectTopicPanelState extends State<SelectTopicPanel> {
                           onTap: () => _controller
                             ..enableClear.value = false
                             ..controller.clear()
-                            ..onRefresh().whenComplete(() => WidgetsBinding
-                                .instance
-                                .addPostFrameCallback((_) =>
-                                    widget.scrollController?.jumpToTop())),
+                            ..onRefresh().whenComplete(
+                              () =>
+                                  WidgetsBinding.instance.addPostFrameCallback(
+                                    (_) => widget.scrollController?.jumpToTop(),
+                                  ),
+                            ),
                         ),
                       )
                     : const SizedBox.shrink(),
               ),
-              suffixIconConstraints:
-                  const BoxConstraints(minHeight: 0, minWidth: 0),
+              suffixIconConstraints: const BoxConstraints(
+                minHeight: 0,
+                minWidth: 0,
+              ),
             ),
           ),
         ),
@@ -179,36 +182,40 @@ class _SelectTopicPanelState extends State<SelectTopicPanel> {
   }
 
   Widget _buildBody(
-      ThemeData theme, LoadingState<List<TopicItem>?> loadingState) {
+    ThemeData theme,
+    LoadingState<List<TopicItem>?> loadingState,
+  ) {
     return switch (loadingState) {
       Loading() => loadingWidget,
-      Success<List<TopicItem>?>(:var response) => response?.isNotEmpty == true
-          ? ListView.builder(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.paddingOf(context).bottom +
-                    MediaQuery.viewInsetsOf(context).bottom +
-                    80,
-              ),
-              controller: widget.scrollController,
-              itemBuilder: (context, index) {
-                if (index == response.length - 1) {
-                  _controller.onLoadMore();
-                }
-                return DynTopicItem(
-                  item: response[index],
-                  onTap: (item) => Get.back(result: item),
-                );
-              },
-              itemCount: response!.length,
-            )
-          : _errWidget(),
+      Success<List<TopicItem>?>(:var response) =>
+        response?.isNotEmpty == true
+            ? ListView.builder(
+                padding: EdgeInsets.only(
+                  bottom:
+                      MediaQuery.paddingOf(context).bottom +
+                      MediaQuery.viewInsetsOf(context).bottom +
+                      80,
+                ),
+                controller: widget.scrollController,
+                itemBuilder: (context, index) {
+                  if (index == response.length - 1) {
+                    _controller.onLoadMore();
+                  }
+                  return DynTopicItem(
+                    item: response[index],
+                    onTap: (item) => Get.back(result: item),
+                  );
+                },
+                itemCount: response!.length,
+              )
+            : _errWidget(),
       Error(:var errMsg) => _errWidget(errMsg),
     };
   }
 
   Widget _errWidget([String? errMsg]) => scrollErrorWidget(
-        errMsg: errMsg,
-        controller: widget.scrollController,
-        onReload: _controller.onReload,
-      );
+    errMsg: errMsg,
+    controller: widget.scrollController,
+    onReload: _controller.onReload,
+  );
 }
